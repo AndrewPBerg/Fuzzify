@@ -1,0 +1,10 @@
+[project]
+name = "dnstwist-testing"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dnstwist[full]>=20240812",
+    "pip>=24.3.1",
+]
