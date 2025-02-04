@@ -1,9 +1,9 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   mysql:
     image: mysql:8.0
-    container_name: capstone
+    container_name: capstone-db
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -14,7 +14,27 @@ services:
       - "3308:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    container_name: capstone-backend
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: soteria_db
+    ports:
+      - "5001:5000"
+    networks:
+      - app-network
 
 volumes:
   mysql_data:
 
+networks:
+  app-network:
