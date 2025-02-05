@@ -30,7 +30,23 @@ def db_test():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+# ✅ Move this above `if __name__ == '__main__':`
+@app.route('/users')
+def get_users():
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM users;")
+        users = cursor.fetchall()
+
+        conn.close()
+
+        return jsonify({"users": users})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+# ✅ This must be at the bottom of the file:
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
