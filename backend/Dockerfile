@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . /app
 
 # Install dependencies
-RUN pip install flask flask-cors mysql-connector-python  # Make sure flask-cors is included
+RUN pip install flask flask-cors mysql-connector-python python-dotenv  # ✅ Includes flask-cors & python-dotenv
 
 # Expose port 5000
 EXPOSE 5000

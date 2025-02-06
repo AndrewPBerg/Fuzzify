@@ -1,15 +1,15 @@
-#version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
     container_name: capstone-db
     restart: always
+    env_file:
+      - ./backend/.env  # ✅ Load credentials from the .env file
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: soteria_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3308:3306"
     volumes:
@@ -23,11 +23,8 @@ services:
     restart: always
     depends_on:
       - mysql
-    environment:
-      DB_HOST: mysql
-      DB_USER: user
-      DB_PASSWORD: password
-      DB_NAME: soteria_db
+    env_file:
+      - ./backend/.env  # ✅ Load credentials from the .env file
     ports:
       - "5001:5000"
     networks:
@@ -38,3 +35,4 @@ volumes:
 
 networks:
   app-network:
+

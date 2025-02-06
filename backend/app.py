@@ -2,21 +2,25 @@ from flask import Flask, jsonify
 import mysql.connector
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv  # ✅ Import dotenv to load .env variables
+
+# ✅ Load environment variables from .env
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# MySQL connection settings
+# ✅ Secure MySQL connection settings using environment variables
 db_config = {
-    "host": os.getenv("DB_HOST", "mysql"),
-    "user": os.getenv("DB_USER", "user"),
-    "password": os.getenv("DB_PASSWORD", "password"),
-    "database": os.getenv("DB_NAME", "soteria_db")
+    "host": os.getenv("DB_HOST"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME")
 }
 
 @app.route('/')
 def home():
-    return jsonify({"message": "Flask Backend is Running!"})
+    return jsonify({"message": "Flask Backend is Running Securely!"})
 
 @app.route('/db-test')
 def db_test():
@@ -30,7 +34,6 @@ def db_test():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# ✅ Move this above `if __name__ == '__main__':`
 @app.route('/users')
 def get_users():
     try:
@@ -50,3 +53,4 @@ def get_users():
 # ✅ This must be at the bottom of the file:
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
