@@ -1,10 +1,12 @@
+version: "3.9"
+
 services:
   mysql:
     image: mysql:8.0
     container_name: capstone-db
     restart: always
     env_file:
-      - ./backend/.env  # ✅ Load credentials from the .env file
+      - ./backend/.env
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -24,15 +26,27 @@ services:
     depends_on:
       - mysql
     env_file:
-      - ./backend/.env  # ✅ Load credentials from the .env file
+      - ./backend/.env
     ports:
       - "5001:5000"
     networks:
       - app-network
+
+  frontend:
+    build: ./frontend  # ✅ Build from the frontend folder
+    container_name: capstone-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"  # ✅ Expose Next.js on port 3000
+    networks:
+      - app-network
+    volumes:
+      - ./frontend:/app  # ✅ Sync local frontend files with Docker
 
 volumes:
   mysql_data:
 
 networks:
   app-network:
-
