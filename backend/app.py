@@ -2,15 +2,15 @@ from flask import Flask, jsonify
 import mysql.connector
 from flask_cors import CORS
 import os
-from dotenv import load_dotenv  # ✅ Import dotenv to load .env variables
+from dotenv import load_dotenv  #  Import dotenv to load .env variables
 
-# ✅ Load environment variables from .env
+#  Load environment variables from .env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# ✅ Secure MySQL connection settings using environment variables
+#  Secure MySQL connection settings using environment variables
 db_config = {
     "host": os.getenv("DB_HOST"),
     "user": os.getenv("DB_USER"),
@@ -50,7 +50,7 @@ def get_users():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# ✅ This must be at the bottom of the file:
+#  This must be at the bottom of the file:
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 

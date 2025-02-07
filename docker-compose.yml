@@ -33,17 +33,17 @@ services:
       - app-network
 
   frontend:
-    build: ./frontend  # ✅ Build from the frontend folder
+    build: ./frontend  # builds from the frontend folder
     container_name: capstone-frontend
     restart: always
     depends_on:
       - backend
     ports:
-      - "3000:3000"  # ✅ Expose Next.js on port 3000
+      - "3000:3000"  #  expose Next.js on port 3000
     networks:
       - app-network
     volumes:
-      - ./frontend:/app  # ✅ Sync local frontend files with Docker
+      - ./frontend:/app  # synced local frontend files with Docker
 
 volumes:
   mysql_data:

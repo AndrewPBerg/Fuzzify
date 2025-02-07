@@ -1,4 +1,4 @@
-"use client";  // Ensure this is a Client Component
+"use client";
 
 import { useEffect, useState } from "react";
 
@@ -7,9 +7,9 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5001/users")  // Fetch from Flask API
+    fetch("/api/backend") // ✅ Call Next.js API instead of Flask directly
       .then((res) => res.json())
-      .then((data) => setUsers(data.users || []))  // Ensure we get an array
+      .then((data) => setUsers(data.users || []))
       .catch((err) => setError("Error fetching users"));
   }, []);
 
@@ -30,3 +30,4 @@ export default function Home() {
     </div>
   );
 }
+
