@@ -1,17 +1,15 @@
-version: "3.9"
+version: '3.8'
 
 services:
   mysql:
     image: mysql:8.0
     container_name: capstone-db
     restart: always
-    env_file:
-      - ./backend/.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: soteria_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
     ports:
       - "3308:3306"
     volumes:
@@ -25,25 +23,15 @@ services:
     restart: always
     depends_on:
       - mysql
-    env_file:
-      - ./backend/.env
+    environment:
+      DB_HOST: mysql
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: soteria_db
     ports:
       - "5001:5000"
     networks:
       - app-network
-
-  frontend:
-    build: ./frontend  # builds from the frontend folder
-    container_name: capstone-frontend
-    restart: always
-    depends_on:
-      - backend
-    ports:
-      - "3000:3000"  #  expose Next.js on port 3000
-    networks:
-      - app-network
-    volumes:
-      - ./frontend:/app  # synced local frontend files with Docker
 
 volumes:
   mysql_data:
