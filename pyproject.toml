@@ -6,5 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dnstwist[full]>=20240812",
+    "flask>=3.1.0",
+    "flask-cors>=5.0.0",
     "pip>=24.3.1",
 ]
