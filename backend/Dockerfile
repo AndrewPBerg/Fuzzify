@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy project files into the container
 COPY . /app
 
-# Install dependencies
-RUN pip install flask flask-cors sqlmodel mysql-connector-python
+# Install dependencies (Added google-cloud-pubsub)
+RUN pip install flask flask-cors sqlmodel mysql-connector-python python-dotenv google-cloud-pubsub
 
 # Expose port 5000
 EXPOSE 5000

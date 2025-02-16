@@ -1,8 +1,12 @@
 from flask import Flask, jsonify
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import SQLModel, create_engine
 from flask_cors import CORS
 import os
-from models import User, Domain, ScanResult
+from dotenv import load_dotenv  # ✅ Load environment variables
+from google.cloud import pubsub_v1  # ✅ Import Pub/Sub
+
+# Load environment variables from .env
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -19,17 +23,28 @@ def create_db_and_tables():
 def home():
     return jsonify({"message": "Flask Backend is Running Securely!"})
 
-@app.route('/users')
-def get_users():
-    with Session(engine) as session:
-        users = session.exec(select(User)).all()
-        return jsonify({"users": [user.dict() for user in users]})
+@app.route('/db-test')
+def db_test():
+    try:
+        with engine.connect() as connection:
+            result = connection.execute("SHOW TABLES;")
+            tables = [row[0] for row in result]
+        return jsonify({"tables": tables})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
-@app.route('/domains')
-def get_domains():
-    with Session(engine) as session:
-        domains = session.exec(select(Domain)).all()
-        return jsonify({"domains": [domain.dict() for domain in domains]})
+# ✅ Setup Google Cloud Pub/Sub Client
+PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+publisher = pubsub_v1.PublisherClient()
+topic_path = f"projects/test-project/topics/test-topic"
+
+@app.route('/test-pubsub')
+def test_pubsub():
+    try:
+        future = publisher.publish(topic_path, b"Hello, Pub/Sub!")
+        return jsonify({"message": "Published to Pub/Sub", "msg_id": future.result()})
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 # Run the app
 if __name__ == '__main__':
