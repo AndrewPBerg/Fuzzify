@@ -4,6 +4,12 @@ FROM python:3.12-slim-bookworm AS base
 # ---- Builder Stage ----
 FROM base AS builder
 
+# Install build dependencies # needed for py-tlsh library
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the uv binary from the official uv image (pin to a version if desired)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
