@@ -1,6 +1,13 @@
 from google.cloud import pubsub_v1
+import os
 
 def test_pubsub_emulator():
+    # export PUBSUB_EMULATOR_HOST=localhost:8085
+    # export PUBSUB_PROJECT_ID="test-project"
+    # Ensure we're using the emulator
+    if not os.getenv('PUBSUB_EMULATOR_HOST'):
+        raise ValueError("PUBSUB_EMULATOR_HOST environment variable is not set")
+
     # This automatically picks up PUBSUB_EMULATOR_HOST from environment
     publisher = pubsub_v1.PublisherClient()
     subscriber = pubsub_v1.SubscriberClient()
