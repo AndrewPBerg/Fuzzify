@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile  # Ensure this points to your Dockerfile
     ports:
-      - "9001:5000"  # Map container's port 5000 to host port 9001
+      - "10001:8000"  # Map container's port 5000 to host port 9001
     depends_on:
       - db
     environment:
@@ -15,16 +15,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile  # Ensure this points to your Dockerfile
     ports:
-      - "9002:3000"
+      - "10002:3000"
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:9001"
+      NEXT_PUBLIC_API_URL: "http://localhost:10002"
 
   db:
     image: mysql:latest
     ports:
-      - "9003:3306"
+      - "10003:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: mydatabase

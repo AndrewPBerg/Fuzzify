@@ -26,7 +26,9 @@ cd dnstwist-testing/frontend
 npm run dev
 ```
 
+# Running with Docker
 
+> requires you to have 
 
 
 # Getting Started
