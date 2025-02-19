@@ -52,6 +52,7 @@ requests==2.32.3
 rsa==4.9
 sqlalchemy==2.0.38
 sqlmodel==0.0.22
+tenacity==8.2.3
 tld==0.13
 typing-extensions==4.12.2
 urllib3==2.3.0

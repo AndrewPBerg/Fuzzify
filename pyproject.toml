@@ -13,4 +13,5 @@ dependencies = [
     "pip>=24.3.1",
     "python-dotenv>=1.0.1",
     "sqlmodel>=0.0.22",
+    "tenacity>=9.0.0",
 ]
