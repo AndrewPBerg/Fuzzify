@@ -1,17 +1,30 @@
-# Use Python as base image
-FROM python:3.9
+# Use a slim Python base image
+FROM python:3.12-slim-bookworm AS base
 
-# Set the working directory
+# Install build dependencies needed for py-tlsh library and mysqlclient
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    g++ \
+    pkg-config \
+    default-libmysqlclient-dev \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Copy project files into the container
-COPY . /app
+# Copy requirements file
+COPY requirements.txt .
 
-# Install dependencies (Added google-cloud-pubsub)
-RUN pip install flask flask-cors sqlmodel mysql-connector-python python-dotenv google-cloud-pubsub
+# Install dependencies using pip with caching
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
-# Expose port 5000
-EXPOSE 5000
+# Copy the application code
+COPY . .
 
-# Run the Flask app
+# Removed EXPOSE 8000 as it's not necessary
+
+# Start the backend service
+# CMD ["python", "flask_testing.py"]
 CMD ["python", "app.py"]
