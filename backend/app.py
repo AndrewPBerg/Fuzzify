@@ -2,8 +2,8 @@ from flask import Flask, jsonify
 from sqlmodel import SQLModel, create_engine
 from flask_cors import CORS
 import os
-from dotenv import load_dotenv  # ✅ Load environment variables
-from google.cloud import pubsub_v1  # ✅ Import Pub/Sub
+from dotenv import load_dotenv  # Load environment variables
+from google.cloud import pubsub_v1  #  Import Pub/Sub
 
 # Load environment variables from .env
 load_dotenv()
