@@ -92,8 +92,8 @@ docker image prune -a -f
 # Remove all unused volumes
 docker volume prune -f
 
-# Remove all unused networks
-docker system prune -f
+docker compose down --rmi all --volumes --remove-orphans
+docker builder prune -f --filter label=com.docker.compose.project=dnstwist-testing
 
 # Remove the builder cache
 docker builder prune -a

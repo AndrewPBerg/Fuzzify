@@ -8,10 +8,10 @@ services:
     volumes:
       - ./backend:/app  # Mount local backend code
     depends_on:
-      - db
-      - pubsub
+      db:
+        condition: service_healthy
     environment:
-      # DATABASE_URL: DB_URL
+      DATABASE_URL: "mysql://user:password@db:5010/mydatabase"
       PYTHONUNBUFFERED: 1  # Add this line to disable Python output buffering
       PUBSUB_EMULATOR_HOST: "pubsub:8085"
       PUBSUB_PROJECT_ID: "local-project"
@@ -38,7 +38,7 @@ services:
     # pubsub service
 
   db:
-    image: mysql:latest
+    image: mysql:8.0
     ports:
       - "5010:5010"
     command: --port=5010
@@ -50,7 +50,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "5010", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -60,11 +60,7 @@ services:
     command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
       - "8085:8085"
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8085"]
-      interval: 10s
-      timeout: 5s
-      retries: 2
 
+      
 volumes:
   mysql_data:
