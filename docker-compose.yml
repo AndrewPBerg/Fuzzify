@@ -1,4 +1,4 @@
-version: "3.8"  # Add this line if it's missing
+version: "3.8"  
 
 services:
   backend:
@@ -40,7 +40,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:10002"
 
-  db:  # Fix indentation if this was misaligned
+  db:  
     image: mysql:8.0  # Ensure MySQL is version 8.0
     ports:
       - "3306:3306"
