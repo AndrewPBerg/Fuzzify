@@ -10,7 +10,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: "mysql://user:password@db:3306/mydatabase"
+      DATABASE_URL: "mysql://user:password@db:5010/mydatabase"
 
   frontend:
     build: 
@@ -31,7 +31,7 @@ services:
   db:
     image: mysql:latest
     ports:
-      - "10003:3306"
+      - "5010:5010"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: mydatabase

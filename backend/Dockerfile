@@ -23,4 +23,5 @@ COPY . .
 # Removed EXPOSE 8000 as it's not necessary
 
 # Start the backend service
-CMD ["python", "flask_testing.py"]
+# CMD ["python", "flask_testing.py"]
+CMD ["python", "app.py"]
