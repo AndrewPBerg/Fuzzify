@@ -1,10 +1,12 @@
 services:
   backend:
     build: 
-      context: .
-      dockerfile: backend/Dockerfile  # Ensure this points to your Dockerfile
+      context: backend
+      dockerfile: Dockerfile  # Ensure this points to your Dockerfile
     ports:
-      - "10001:8000"  # Map container's port 5000 to host port 9001
+      - "10001:8000"  # Map container's port to local host's port
+    volumes:
+      - ./backend:/app  # Mount local backend code
     depends_on:
       - db
     environment:
@@ -16,10 +18,15 @@ services:
       dockerfile: Dockerfile  # Ensure this points to your Dockerfile
     ports:
       - "10002:3000"
+    volumes:
+      - ./frontend:/app  # Mount local frontend code
+      - /app/node_modules  # Preserve container node_modules
     depends_on:
       - backend
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:10002"
+
+    # pubsub service
 
   db:
     image: mysql:latest

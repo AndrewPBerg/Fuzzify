@@ -5,17 +5,10 @@ Desc: Demo Flask Backed to connect w/ React Frontend
 """
 
 from flask import Flask, jsonify
-from flask_cors import CORS
-
+from flask_cors import CORS  # Add this import
+print("Hello World!")
 app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"],
-        "supports_credentials": False
-    }
-})
+CORS(app)  # Enable CORS for all routes
 
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -30,7 +23,8 @@ def get_data():
 
 
 def main():
-    app.run(debug=True, port=5000)
+    # Use host='0.0.0.0' to allow external connections
+    app.run(host='0.0.0.0', port=8000, debug=True)
     
 if __name__ == "__main__":
     main()
