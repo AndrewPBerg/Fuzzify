@@ -75,6 +75,32 @@ The following services will be available:
 - MySQL: localhost:5010
 - PubSub Emulator: localhost:8085
 
+
+### Docker Cleanup
+
+Docker loves to eat up local storage, so please be careful when contributing.
+
+Run the following commands to take back control of your cached builds, containers, images, and volumes:
+
+```bash
+# Remove all stopped containers
+docker container prune -f
+
+# Remove all unused images
+docker image prune -a -f
+
+# Remove all unused volumes
+docker volume prune -f
+
+# Remove all unused networks
+docker system prune -f
+
+# Remove the builder cache
+docker builder prune -a
+```
+
+
+
 ### Option 2: Running Locally
 
 1. Start the backend server:
@@ -153,4 +179,6 @@ npm test
 [TODO License Here]
 
 ## Contributors [TODO]
+
+
 
