@@ -25,10 +25,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection
-# DATABASE_URL = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:5010/{os.getenv('DB_NAME')}"
-DATABASE_URL = str(os.getenv('DB_URL'))
-if DEBUG:
-    logger.debug(f"Connecting to database at: {os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password@db:3306/mydatabase") 
 engine = create_engine(DATABASE_URL)
 
 # Create tables if they don't exist
@@ -69,47 +66,10 @@ def db_test():
             logger.error(f"Database error: {str(e)}")
         return jsonify({"error": str(e)})
 
-# Modified database connection with retry
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
-def init_db_connection():
-    try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-            logger.debug("Database connection successful")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
-
-# Modified PubSub initialization with retry
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
-def init_pubsub_client():
-    try:
-        publisher = pubsub_v1.PublisherClient()
-        subscriber = pubsub_v1.SubscriberClient()
-        # Test connection
-        project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "test-project")
-        topic_path = publisher.topic_path(project_id, "test-topic")
-        
-        # Try to get the topic first
-        try:
-            publisher.get_topic(request={"topic": topic_path})
-            logger.debug("Using existing topic")
-        except Exception:
-            # Topic doesn't exist, create it
-            try:
-                publisher.create_topic(request={"name": topic_path})
-                logger.debug("Created new topic")
-            except Exception as e:
-                if "ALREADY_EXISTS" in str(e):
-                    logger.debug("Topic was created concurrently")
-                else:
-                    raise
-
-        logger.debug("PubSub connection successful")
-        return publisher, subscriber
-    except Exception as e:
-        logger.error(f"PubSub initialization failed: {e}")
-        raise
+#  Setup Google Cloud Pub/Sub Client
+PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+publisher = pubsub_v1.PublisherClient()
+topic_path = f"projects/test-project/topics/test-topic"
 
 @app.route('/test-pubsub')
 def test_pubsub():

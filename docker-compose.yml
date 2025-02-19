@@ -1,47 +1,50 @@
+version: "3.8"  # Add this line if it's missing
+
 services:
   backend:
-    build: 
+    build:
       context: backend
-      dockerfile: Dockerfile  # Ensure this points to your Dockerfile
+      dockerfile: Dockerfile
     ports:
-      - "10001:8000"  # Map container's port to local host's port
+      - "5001:5000"
     volumes:
-      - ./backend:/app  # Mount local backend code
+      - ./backend:/app
     depends_on:
-      - db
-      - pubsub
+      db:
+        condition: service_healthy
+      pubsub:
+        condition: service_healthy
     environment:
-      # DATABASE_URL: DB_URL
-      PYTHONUNBUFFERED: 1  # Add this line to disable Python output buffering
+      DB_URL: "mysql+mysqlconnector://user:password@db:3306/mydatabase"
       PUBSUB_EMULATOR_HOST: "pubsub:8085"
       PUBSUB_PROJECT_ID: "local-project"
+      PYTHONUNBUFFERED: 1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 10s
       timeout: 5s
-      retries: 2
+      retries: 3
 
   frontend:
-    build: 
+    build:
       context: ./frontend
-      dockerfile: Dockerfile  # Ensure this points to your Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "10002:3000"
     volumes:
-      - ./frontend:/app  # Mount local frontend code
-      - /app/node_modules  # Preserve container node_modules
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:10002"
 
-    # pubsub service
-
-  db:
-    image: mysql:latest
+  db:  # Fix indentation if this was misaligned
+    image: mysql:8.0  # Ensure MySQL is version 8.0
     ports:
-      - "5010:5010"
-    command: --port=5010
+      - "3306:3306"
+    command: --port=3306
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: mydatabase
@@ -57,6 +60,7 @@ services:
 
   pubsub:
     image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    platform: linux/amd64
     command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
       - "8085:8085"
@@ -64,7 +68,7 @@ services:
       test: ["CMD", "nc", "-z", "localhost", "8085"]
       interval: 10s
       timeout: 5s
-      retries: 2
+      retries: 3
 
 volumes:
   mysql_data:
