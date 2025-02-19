@@ -43,6 +43,16 @@ def create_db_and_tables():
 def home():
     return jsonify({"message": "Flask Backend is Running Securely!"})
 
+@app.route("/api/data", methods=["GET"])
+def get_data():
+    
+    sample_data = [
+        {"id": 1, "name": "Alice"},
+        {"id": 2, "name": "Bob"},
+        {"id": 3, "name": "Charlie"}
+    ]
+    return jsonify(sample_data)
+
 @app.route('/db-test')
 def db_test():
     if DEBUG:
