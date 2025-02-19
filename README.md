@@ -150,7 +150,7 @@ npm test
 
 ## License
 
-[Your License Here]
+[TODO License Here]
 
 ## Contributors [TODO]
 
