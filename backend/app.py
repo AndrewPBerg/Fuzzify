@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from sqlmodel import SQLModel, create_engine
+from sqlalchemy import text
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv  # ✅ Load environment variables
@@ -24,7 +25,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection
-DATABASE_URL = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:5010/{os.getenv('DB_NAME')}"
+# DATABASE_URL = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:5010/{os.getenv('DB_NAME')}"
+DATABASE_URL = str(os.getenv('DB_URL'))
 if DEBUG:
     logger.debug(f"Connecting to database at: {os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}")
 engine = create_engine(DATABASE_URL)
@@ -77,11 +79,22 @@ def init_pubsub_client():
         # Test connection
         project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "test-project")
         topic_path = publisher.topic_path(project_id, "test-topic")
+        
+        # Try to get the topic first
         try:
-            publisher.create_topic(request={"name": topic_path})
-        except Exception as e:
-            if "ALREADY_EXISTS" not in str(e):
-                raise
+            publisher.get_topic(request={"topic": topic_path})
+            logger.debug("Using existing topic")
+        except Exception:
+            # Topic doesn't exist, create it
+            try:
+                publisher.create_topic(request={"name": topic_path})
+                logger.debug("Created new topic")
+            except Exception as e:
+                if "ALREADY_EXISTS" in str(e):
+                    logger.debug("Topic was created concurrently")
+                else:
+                    raise
+
         logger.debug("PubSub connection successful")
         return publisher, subscriber
     except Exception as e:
@@ -90,6 +103,8 @@ def init_pubsub_client():
 
 @app.route('/test-pubsub')
 def test_pubsub():
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "test-project")
+    topic_path = publisher.topic_path(project_id, "test-topic")
     if DEBUG:
         logger.debug(f"Attempting to publish message to topic: {topic_path}")
     try:

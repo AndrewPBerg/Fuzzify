@@ -1,10 +1,13 @@
 # Use a slim Python base image
 FROM python:3.12-slim-bookworm AS base
 
-# Install build dependencies needed for py-tlsh library
+# Install build dependencies needed for py-tlsh library and mysqlclient
 RUN apt-get update && apt-get install -y \
     build-essential \
     g++ \
+    pkg-config \
+    default-libmysqlclient-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

@@ -11,7 +11,7 @@ services:
       - db
       - pubsub
     environment:
-      DATABASE_URL: "mysql://user:password@db:5010/mydatabase"
+      # DATABASE_URL: DB_URL
       PYTHONUNBUFFERED: 1  # Add this line to disable Python output buffering
       PUBSUB_EMULATOR_HOST: "pubsub:8085"
       PUBSUB_PROJECT_ID: "local-project"
@@ -19,7 +19,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 2
 
   frontend:
     build: 
@@ -64,7 +64,7 @@ services:
       test: ["CMD", "nc", "-z", "localhost", "8085"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 2
 
 volumes:
   mysql_data:
