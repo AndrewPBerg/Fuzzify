@@ -3,11 +3,10 @@ from sqlmodel import SQLModel, create_engine
 from sqlalchemy import text
 from flask_cors import CORS
 import os
-from dotenv import load_dotenv  # ✅ Load environment variables
-from google.cloud import pubsub_v1  # ✅ Import Pub/Sub
+from dotenv import load_dotenv
+from google.cloud import pubsub_v1
 import logging
 import time
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 DEBUG = True
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -42,7 +41,6 @@ def home():
 
 @app.route("/api/data", methods=["GET"])
 def get_data():
-    
     sample_data = [
         {"id": 1, "name": "Alice"},
         {"id": 2, "name": "Bob"},
@@ -66,7 +64,7 @@ def db_test():
             logger.error(f"Database error: {str(e)}")
         return jsonify({"error": str(e)})
 
-#  Setup Google Cloud Pub/Sub Client
+# Setup Google Cloud Pub/Sub Client
 PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
 publisher = pubsub_v1.PublisherClient()
 topic_path = f"projects/test-project/topics/test-topic"
@@ -88,16 +86,8 @@ def test_pubsub():
             logger.error(f"Pub/Sub error: {str(e)}")
         return jsonify({"error": str(e)})
 
-# Modified startup sequence
+# Startup sequence
 if __name__ == '__main__':
-    # Wait for services to be ready
-    time.sleep(5)
-    
-    try:
-        init_db_connection()
-        publisher, subscriber = init_pubsub_client()
-        create_db_and_tables()
-        app.run(host='0.0.0.0', port=8000, debug=True)
-    except Exception as e:
-        logger.error(f"Startup failed: {e}")
-        exit(1)
+    time.sleep(5)  # Allow database & services to start
+    create_db_and_tables()  # Initialize database
+    app.run(host='0.0.0.0', port=5000, debug=True)  # Match Docker Compose port mapping
