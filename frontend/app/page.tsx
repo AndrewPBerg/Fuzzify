@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 const queryClient = new QueryClient();
 
 const fetchData = async () => {
-    const response = await fetch("http://127.0.0.1:5000/api/data");
+    const response = await fetch("http://127.0.0.1:10001/api/data");
     if (!response.ok) {
         throw new Error("Network response was not ok");
     }

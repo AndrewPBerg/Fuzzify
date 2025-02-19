@@ -1,68 +1,70 @@
-version: "3.9"
-
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: capstone-db
-    restart: always
-    env_file:
-      - ./backend/.env
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "3308:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - app-network
-
   backend:
-    build: ./backend
-    container_name: capstone-backend
-    restart: always
-    depends_on:
-      mysql:
-        condition: service_healthy
-      pubsub-emulator:  # ✅ Added Pub/Sub dependency
-        condition: service_started
-    env_file:
-      - ./backend/.env
-    environment:
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085  # ✅ Connect backend to emulator
+    build: 
+      context: backend
+      dockerfile: Dockerfile  # Ensure this points to your Dockerfile
     ports:
-      - "5001:5000"
-    networks:
-      - app-network
+      - "10001:8000"  # Map container's port to local host's port
+    volumes:
+      - ./backend:/app  # Mount local backend code
+    depends_on:
+      - db
+      - pubsub
+    environment:
+      # DATABASE_URL: DB_URL
+      PYTHONUNBUFFERED: 1  # Add this line to disable Python output buffering
+      PUBSUB_EMULATOR_HOST: "pubsub:8085"
+      PUBSUB_PROJECT_ID: "local-project"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
 
   frontend:
-    build: ./frontend  # builds from the frontend folder
-    container_name: capstone-frontend
-    restart: always
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile  # Ensure this points to your Dockerfile
+    ports:
+      - "10002:3000"
+    volumes:
+      - ./frontend:/app  # Mount local frontend code
+      - /app/node_modules  # Preserve container node_modules
     depends_on:
       - backend
-    ports:
-      - "3000:3000"  # expose Next.js on port 3000
-    networks:
-      - app-network
-    volumes:
-      - ./frontend:/app  # synced local frontend files with Docker
-
-  pubsub-emulator:
-    image: google/cloud-sdk:latest
-    container_name: pubsub-emulator
     environment:
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085  # Emulator's hostname within the network
+      NEXT_PUBLIC_API_URL: "http://localhost:10002"
+
+    # pubsub service
+
+  db:
+    image: mysql:latest
+    ports:
+      - "5010:5010"
+    command: --port=5010
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
       - "8085:8085"
-    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085"] # Starts the emulator
-    networks:
-      - app-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8085"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
 
 volumes:
   mysql_data:
-
-networks:
-  app-network:
