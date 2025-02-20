@@ -28,7 +28,7 @@ CORS(app)
 # DATABASE_URL = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:5010/{os.getenv('DB_NAME')}"
 DATABASE_URL = str(os.getenv('DB_URL'))
 if DEBUG:
-    logger.debug(f"Connecting to database at: {os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}")
+    logger.debug(f"Connecting to database at: {DATABASE_URL}")
 engine = create_engine(DATABASE_URL)
 
 # Create tables if they don't exist
