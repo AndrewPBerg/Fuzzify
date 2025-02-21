@@ -33,7 +33,7 @@ services:
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:10002"
+      NEXT_PUBLIC_API_URL: "http://localhost:10001"
 
     # pubsub service
 
