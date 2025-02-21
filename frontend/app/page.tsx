@@ -3,9 +3,7 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
-// const baseUrl = process.env.NEXT_PUBLIC_API_URL; // TODO env not working.
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-// const baseUrl = "http://localhost:10001";
 
 // Create a reusable fetch function that takes a path parameter
 const fetchData = async (path: string) => {
