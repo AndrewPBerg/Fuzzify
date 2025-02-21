@@ -24,7 +24,11 @@ const fetchData = async (path: string) => {
 };
 
 // Component that fetches data from the API
-function DataFetcher({ path }: { path: string }) {
+interface DataFetcherProps {
+    path: string;
+}
+
+function DataFetcher({ path }: DataFetcherProps) {
     const { data, error, isLoading, refetch } = useQuery({
         queryKey: ['apiData', path], // Include path in queryKey to handle different routes
         queryFn: () => fetchData(path),
