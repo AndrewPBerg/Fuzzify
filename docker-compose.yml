@@ -38,7 +38,7 @@ services:
       backend:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:10002"
+      NEXT_PUBLIC_API_URL: "http://localhost:10001"
 
   db:  
     image: mysql:8.0  # Ensure MySQL is version 8.0
@@ -53,7 +53,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "5010", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 3
