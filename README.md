@@ -80,23 +80,13 @@ The following services will be available:
 
 Docker loves to eat up local storage, so please be careful when contributing.
 
-Run the following commands to take back control of your cached builds, containers, images, and volumes:
+Run the following one-liner to take back control of your cached builds, containers, images, and volumes:
+
+> be careful not to delete all of the docker images and containers on your system!
 
 ```bash
-# Remove all stopped containers
-docker container prune -f
-
-# Remove all unused images
-docker image prune -a -f
-
-# Remove all unused volumes
-docker volume prune -f
-
-# Remove all unused networks
-docker system prune -f
-
-# Remove the builder cache
-docker builder prune -a
+docker compose down --rmi all --volumes --remove-orphans
+docker builder prune -f --filter label=com.docker.compose.project=dnstwist-testing
 ```
 
 
