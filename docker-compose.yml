@@ -1,12 +1,10 @@
-version: "3.8"  
-
 services:
   backend:
     build:
       context: backend
       dockerfile: Dockerfile
     ports:
-      - "5001:5000"
+      - "10001:8000"  # Ensure backend listens on correct port
     volumes:
       - ./backend:/app
     depends_on:
@@ -20,7 +18,7 @@ services:
       PUBSUB_PROJECT_ID: "local-project"
       PYTHONUNBUFFERED: 1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]  # Updated from 5000 to 8000
       interval: 10s
       timeout: 5s
       retries: 3
@@ -38,9 +36,9 @@ services:
       backend:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:10001"
+      NEXT_PUBLIC_API_URL: "http://backend:8000"  # Fixed from localhost to backend container name
 
-  db:  
+  db:
     image: mysql:8.0  # Ensure MySQL is version 8.0
     ports:
       - "3306:3306"
@@ -53,7 +51,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "5010", "-u", "root", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "3306", "-u", "root", "-proot"]  # Fixed from 5010 to 3306
       interval: 10s
       timeout: 5s
       retries: 3
