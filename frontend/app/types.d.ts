@@ -5,3 +5,6 @@ declare namespace JSX {
     [elemName: string]: any;
   }
 }
+
+declare module '@/components/ui/badge';
+declare module '@/components/ui/table';
