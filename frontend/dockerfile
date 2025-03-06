@@ -1,0 +1,25 @@
+# Use Node.js as the base image
+FROM node:18-alpine
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy package.json and package-lock.json first (for caching)
+COPY package.json package-lock.json ./
+
+# Install ALL dependencies including dev dependencies
+RUN npm install autoprefixer --save-dev
+
+
+# Copy the rest of the application files
+COPY . .
+
+# # Build the Next.js application
+# RUN npm run build
+
+
+# Expose port 3000 (default for Next.js)
+EXPOSE 3000
+
+# Start the Next.js application
+CMD ["npm", "run", "dev"]

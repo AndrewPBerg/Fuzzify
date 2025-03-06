@@ -10,18 +10,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      pubsub:
-        condition: service_healthy
     environment:
       DB_URL: "mysql+mysqlconnector://user:password@db:3306/mydatabase"
       PUBSUB_EMULATOR_HOST: "pubsub:8085"
       PUBSUB_PROJECT_ID: "local-project"
       PYTHONUNBUFFERED: 1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]  # Updated from 5000 to 8000
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s  # Increased interval to give more time for startup
+      timeout: 10s   # Increased timeout
+      retries: 5     # Increased retries
+      start_period: 15s  # Added start period to allow for initialization
 
   frontend:
     build:
@@ -36,12 +35,12 @@ services:
       backend:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://backend:8000"  # Fixed from localhost to backend container name
+      NEXT_PUBLIC_API_URL: "http://backend:8000"
+      NODE_ENV: "development"
+      NEXT_TELEMETRY_DISABLED: "1"
 
   db:
     image: mysql:8.0  # Ensure MySQL is version 8.0
-    ports:
-      - "3306:3306"
     command: --port=3306
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -51,7 +50,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "3306", "-u", "root", "-proot"]  # Fixed from 5010 to 3306
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "3306", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -62,11 +61,6 @@ services:
     command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
       - "8085:8085"
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8085"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 volumes:
   mysql_data:

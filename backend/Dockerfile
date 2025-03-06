@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     default-libmysqlclient-dev \
     python3-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -23,8 +24,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy the application code
 COPY . .
 
-# Removed EXPOSE 8000 as it's not necessary
+# Explicitly expose port 8000
+EXPOSE 8000
 
 # Start the backend service
-# CMD ["python", "flask_testing.py"]
 CMD ["python", "app.py"]
