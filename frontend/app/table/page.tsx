@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Globe2 } from "lucide-react";
-import { useEffect, useState } from "react";
 
 interface DomainInfo {
   extension: string;
@@ -27,23 +26,48 @@ interface DomainData {
   };
 }
 
+const data: DomainData = {
+  "domain-root": "example.com",
+  permutations: {
+    "examp1e.com": {
+      extension: ".com",
+      registrar: "GoDaddy",
+      availability: "registered",
+      "registration-date": "2023-01-15",
+      "ip-address": "192.0.2.1",
+    },
+    "examp1e.net": {
+      extension: ".net",
+      registrar: "Namecheap",
+      availability: "available",
+      "registration-date": null,
+      "ip-address": null,
+    },
+    "examp1e.org": {
+      extension: ".org",
+      registrar: "Bluehost",
+      availability: "registered",
+      "registration-date": "2022-11-20",
+      "ip-address": "203.0.113.5",
+    },
+    "examp1e.co": {
+      extension: ".co",
+      registrar: "Google Domains",
+      availability: "available",
+      "registration-date": null,
+      "ip-address": null,
+    },
+    "examp1e.info": {
+      extension: ".info",
+      registrar: "HostGator",
+      availability: "registered",
+      "registration-date": "2023-03-10",
+      "ip-address": "198.51.100.10",
+    },
+  },
+};
+
 export default function DomainsPage() {
-  const [data, setData] = useState<DomainData | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await fetch("/sample-table.JSON");
-      const jsonData: DomainData = await response.json();
-      setData(jsonData);
-    };
-
-    fetchData();
-  }, []);
-
-  if (!data) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div className="rounded-lg border bg-card">
       <Table>
@@ -74,10 +98,10 @@ export default function DomainsPage() {
                 </Badge>
               </TableCell>
               <TableCell>
-                {info["registration-date"] !== null ? info["registration-date"] : "-"}
+                {info["registration-date"] || "-"}
               </TableCell>
               <TableCell>
-                {info["ip-address"] !== null ? info["ip-address"] : "-"}
+                {info["ip-address"] || "-"}
               </TableCell>
             </TableRow>
           ))}
