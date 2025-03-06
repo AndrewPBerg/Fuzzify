@@ -1,18 +1,35 @@
-"use client";
+import '@/app/globals.css';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Sidebar } from '@/components/sidebar';
+import { ThemeProvider } from '@/components/theme-provider';
 
-import { ThemeProvider } from "next-themes";
+const inter = Inter({ subsets: ['latin'] });
 
-export default function DomainsLayout({
+export const metadata: Metadata = {
+  title: 'Domain Permutations',
+  description: 'Domain availability checker and permutation analyzer',
+};
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <div className="container mx-auto py-10">
-        <h1 className="text-4xl font-bold mb-8">Domain Permutations</h1>
-        {children}
-      </div>
-    </ThemeProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <div className="flex">
+            <div className="w-64">
+              <Sidebar />
+            </div>
+            <main className="flex-1 p-8">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }
