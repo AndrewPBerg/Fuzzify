@@ -8,6 +8,9 @@ dist/
 wheels/
 *.egg-info
 .venv
+.DS_Store
+*.DS_Store
+
 
 # Node.js / JavaScript
 node_modules/
