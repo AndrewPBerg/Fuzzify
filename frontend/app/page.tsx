@@ -1,109 +1,112 @@
-'use client';
+"use client";
 
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Globe2 } from "lucide-react";
 
-const queryClient = new QueryClient();
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+interface DomainInfo {
+  extension: string;
+  registrar: string;
+  availability: string;
+  "registration-date": string | null;
+  "ip-address": string | null;
+}
 
-// Create a reusable fetch function that takes a path parameter
-const fetchData = async (path: string) => {
-    // Log the URL being used (for debugging)
-    console.log('Using API URL:', baseUrl);
-    
-    if (!baseUrl) {
-        throw new Error('API URL not configured');
-    }
+interface DomainData {
+  "domain-root": string;
+  permutations: {
+    [key: string]: DomainInfo;
+  };
+}
 
-    const response = await fetch(`${baseUrl}${path}`);
-    if (!response.ok) {
-        throw new Error(`Network response was not ok with message: (${response.status}) \n with url ${baseUrl}${path}`);
-    }
-    return response.json();
+const data: DomainData = {
+  "domain-root": "example.com",
+  permutations: {
+    "examp1e.com": {
+      extension: ".com",
+      registrar: "GoDaddy",
+      availability: "registered",
+      "registration-date": "2023-01-15",
+      "ip-address": "192.0.2.1",
+    },
+    "examp1e.net": {
+      extension: ".net",
+      registrar: "Namecheap",
+      availability: "available",
+      "registration-date": null,
+      "ip-address": null,
+    },
+    "examp1e.org": {
+      extension: ".org",
+      registrar: "Bluehost",
+      availability: "registered",
+      "registration-date": "2022-11-20",
+      "ip-address": "203.0.113.5",
+    },
+    "examp1e.co": {
+      extension: ".co",
+      registrar: "Google Domains",
+      availability: "available",
+      "registration-date": null,
+      "ip-address": null,
+    },
+    "examp1e.info": {
+      extension: ".info",
+      registrar: "HostGator",
+      availability: "registered",
+      "registration-date": "2023-03-10",
+      "ip-address": "198.51.100.10",
+    },
+  },
 };
 
-// Component that fetches data from the API
-interface DataFetcherProps {
-    path: string;
-}
-
-function DataFetcher({ path }: DataFetcherProps) {
-    const { data, error, isLoading, refetch } = useQuery({
-        queryKey: ['apiData', path], // Include path in queryKey to handle different routes
-        queryFn: () => fetchData(path),
-        staleTime: 5000
-    });
-
-    // Display loading, error, or data from API
-    return (
-        <div style={{ 
-            padding: '20px', 
-            textAlign: 'center',
-            maxWidth: '100%',
-            width: '100%',
-            boxSizing: 'border-box'
-        }}>
-            <h1 style={{ fontSize: 'clamp(16px, 2vw, 20px)', fontWeight: 'bold', marginBottom: '20px' }}>
-                API Data for {path}
-            </h1>
-            {isLoading && <p>Loading...</p>}
-            {error && <p style={{ color: 'red' }}>Error: {error.message}</p>}
-            {data && (
-                <div style={{ 
-                    padding: '10px', 
-                    background: '#f0f0f0', 
-                    borderRadius: '8px', 
-                    display: 'inline-block', 
-                    textAlign: 'left',
-                    maxWidth: '100%',
-                    overflow: 'auto'
-                }}>
-                    <pre style={{ fontSize: '14px', margin: 0 }}>{JSON.stringify(data, null, 2)}</pre>
+export default function DomainsPage() {
+  return (
+    <div className="rounded-lg border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[200px]">Domain</TableHead>
+            <TableHead>Registrar</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Registration Date</TableHead>
+            <TableHead>IP Address</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Object.entries(data.permutations).map(([domain, info]) => (
+            <TableRow key={domain}>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  <Globe2 className="h-4 w-4 text-muted-foreground" />
+                  {domain}
                 </div>
-            )}
-            <button 
-                onClick={() => refetch()} 
-                style={{ 
-                    marginTop: '20px', 
-                    padding: '10px 15px', 
-                    backgroundColor: '#0070f3', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '5px', 
-                    cursor: 'pointer',
-                    width: 'fit-content'
-                }}
-            >
-                Refresh Data
-            </button>
-        </div>
-    );
-}
-
-export default function Page() {
-    // Render DataFetcher component with different API endpoints
-    return (
-        <QueryClientProvider client={queryClient}>
-            <div style={{ 
-                maxWidth: '1200px', 
-                margin: '0 auto', 
-                padding: '20px'
-            }}>
-                <h2>Different API Endpoints</h2>
-                <h2>Talking to: {baseUrl}</h2>
-                <div style={{ 
-                    display: 'flex', 
-                    gap: '20px', 
-                    justifyContent: 'center', 
-                    marginBottom: '20px',
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    alignItems: 'stretch'
-                }}>
-                    <DataFetcher path="/api/data" />
-                    <DataFetcher path="/db-test" />
-                    <DataFetcher path="/test-pubsub" />
-                </div>
-            </div>
-        </QueryClientProvider>
-    );
+              </TableCell>
+              <TableCell>{info.registrar}</TableCell>
+              <TableCell>
+                <Badge
+                  variant={info.availability === "registered" ? "destructive" : "success"}
+                >
+                  {info.availability}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {info["registration-date"] || "-"}
+              </TableCell>
+              <TableCell>
+                {info["ip-address"] || "-"}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
