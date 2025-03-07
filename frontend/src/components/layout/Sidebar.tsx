@@ -28,6 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Define Position type
 type Position = {
@@ -41,6 +42,89 @@ const navigation = [
   { name: "Schedule", href: "/schedule", icon: Clock },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
+
+// Mobile navigation component
+const MobileNavigation = memo(({ pathname }: { pathname: string }) => {
+  return (
+    <>
+      {/* Add a spacer div to prevent content from being hidden under the navbar */}
+      <div className="h-16" />
+      <div className={cn(
+        "fixed top-0 left-0 right-0 z-50",
+        "h-16 px-4 bg-background/95 backdrop-blur-lg",
+        "border-b border-border",
+        "flex items-center justify-between",
+        "transition-all duration-300"
+      )}>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-center h-9 w-9 rounded-full shrink-0",
+                      "transition-colors duration-200",
+                      "hover:bg-muted",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "text-muted-foreground bg-muted/50"
+                    )}
+                  >
+                    <item.icon 
+                      size={18} 
+                      className={cn(
+                        "transition-colors duration-200",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground"
+                      )} 
+                    />
+                    <span className="sr-only">{item.name}</span>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={8}>
+                  <span>{item.name}</span>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted">
+                <User className="h-4.5 w-4.5 text-muted-foreground" />
+                <span className="sr-only">Account menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Organization Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Team</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive">
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </>
+  );
+});
+
+MobileNavigation.displayName = "MobileNavigation";
 
 // Memoize navigation items to prevent re-renders
 const NavigationItems = memo(({ pathname, isCollapsed }: { pathname: string, isCollapsed: boolean }) => {
@@ -86,7 +170,7 @@ const NavigationItems = memo(({ pathname, isCollapsed }: { pathname: string, isC
 NavigationItems.displayName = "NavigationItems";
 
 export function Sidebar() {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [position, setPosition] = useState<Position>(() => {
     // Initialize position from localStorage or default
@@ -178,6 +262,10 @@ export function Sidebar() {
   const toggleCollapse = useCallback(() => {
     setIsCollapsed(prev => !prev);
   }, []);
+
+  if (isMobile) {
+    return <MobileNavigation pathname={pathname} />;
+  }
 
   return (
     <TooltipProvider delayDuration={300}>
