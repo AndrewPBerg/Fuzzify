@@ -8,6 +8,9 @@ const nextConfig = {
     return config;
   },
   output: 'export',
+  
+    // Add any other necessary configuration
+    // reactStrictMode: true,
 };
 
 module.exports = nextConfig; 
