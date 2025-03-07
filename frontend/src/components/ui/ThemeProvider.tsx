@@ -47,16 +47,28 @@ export function ThemeProvider({
     root.classList.remove("light", "dark");
 
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-
-      root.classList.add(systemTheme);
-      return;
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      
+      const applySystemTheme = (isDark: boolean) => {
+        const systemTheme = isDark ? "dark" : "light";
+        root.classList.add(systemTheme);
+      };
+      
+      // Apply initial system theme
+      applySystemTheme(mediaQuery.matches);
+      
+      // Listen for system theme changes
+      const handleChange = (e: MediaQueryListEvent) => {
+        root.classList.remove("light", "dark");
+        applySystemTheme(e.matches);
+      };
+      
+      mediaQuery.addEventListener("change", handleChange);
+      
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    } else {
+      root.classList.add(theme);
     }
-
-    root.classList.add(theme);
   }, [theme, mounted]);
 
   const value = {

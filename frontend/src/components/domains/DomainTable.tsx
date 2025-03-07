@@ -1,120 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-// Mock data for domain table with threat levels
-const domains = [
-  {
-    id: 1,
-    name: "example.com",
-    ip: "192.168.1.1",
-    created: "2023-05-10",
-    owner: "John Doe",
-    status: "active",
-    threatLevel: "secure"
-  },
-  {
-    id: 2,
-    name: "test-domain.com",
-    ip: "192.168.1.2",
-    created: "2023-06-15",
-    owner: "Jane Smith",
-    status: "active",
-    threatLevel: "warning"
-  },
-  {
-    id: 3,
-    name: "demo-site.net",
-    ip: "192.168.1.3",
-    created: "2023-07-20",
-    owner: "Alex Johnson",
-    status: "inactive",
-    threatLevel: "secure"
-  },
-  {
-    id: 4,
-    name: "my-app.io",
-    ip: "192.168.1.4",
-    created: "2023-08-05",
-    owner: "Sam Wilson",
-    status: "pending",
-    threatLevel: "critical"
-  },
-  {
-    id: 5,
-    name: "new-project.co",
-    ip: "192.168.1.5",
-    created: "2023-09-12",
-    owner: "Taylor Lee",
-    status: "active",
-    threatLevel: "false-positive"
-  },
-  {
-    id: 6,
-    name: "test-env.dev",
-    ip: "192.168.1.6",
-    created: "2023-10-18",
-    owner: "Jordan Chen",
-    status: "inactive",
-    threatLevel: "warning"
-  },
-  {
-    id: 7,
-    name: "api-gateway.cloud",
-    ip: "192.168.1.7",
-    created: "2023-11-23",
-    owner: "Morgan Brown",
-    status: "active",
-    threatLevel: "secure"
-  },
-  {
-    id: 8,
-    name: "test-site.org",
-    ip: "192.168.1.8",
-    created: "2023-12-05",
-    owner: "Alex Johnson",
-    status: "active",
-    threatLevel: "critical"
-  },
-  {
-    id: 9,
-    name: "dev-portal.net",
-    ip: "192.168.1.9",
-    created: "2024-01-10",
-    owner: "Jamie Wilson",
-    status: "inactive",
-    threatLevel: "warning"
-  },
-  {
-    id: 10,
-    name: "staging-app.io",
-    ip: "192.168.1.10",
-    created: "2024-02-15",
-    owner: "Casey Smith",
-    status: "pending",
-    threatLevel: "secure"
-  },
-  {
-    id: 11,
-    name: "production.co",
-    ip: "192.168.1.11",
-    created: "2024-03-20",
-    owner: "Jordan Lee",
-    status: "active",
-    threatLevel: "false-positive"
-  },
-  {
-    id: 12,
-    name: "data-api.dev",
-    ip: "192.168.1.12",
-    created: "2024-04-25",
-    owner: "Taylor Chen",
-    status: "inactive",
-    threatLevel: "critical"
-  }
-];
+// Define domain interface
+interface Domain {
+  id: number;
+  name: string;
+  ip: string;
+  created: string;
+  owner: string;
+  status: string;
+  threatLevel: string;
+}
 
 interface Column {
   key: string;
@@ -141,6 +41,9 @@ const threatIcons = {
 const ITEMS_PER_PAGE = 5;
 
 export function DomainTable() {
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,6 +52,77 @@ export function DomainTable() {
     status: "",
     threatLevel: ""
   });
+  const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
+  const [domainRoots, setDomainRoots] = useState<string[]>([]);
+
+  // Fetch domain roots from localStorage
+  useEffect(() => {
+    const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+    setDomainRoots(storedRoots);
+    
+    // Add event listener for storage changes
+    const handleStorageChange = () => {
+      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+      setDomainRoots(updatedRoots);
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // Fetch domain permutations when a domain root is selected
+  useEffect(() => {
+    if (!selectedDomainRoot) {
+      // Use mock data if no domain root is selected
+      import('./mockDomains').then(module => {
+        setDomains(module.default);
+        setLoading(false);
+      }).catch(err => {
+        console.error('Error loading mock domains:', err);
+        setDomains([]);
+        setLoading(false);
+      });
+      return;
+    }
+
+    const fetchDomainPermutations = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(`/api/domains/permutations?domain=${selectedDomainRoot}`);
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching domain permutations: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transform the data to match our domain interface
+        const transformedData = data.map((item: any, index: number) => ({
+          id: index + 1,
+          name: item.domain || item.name,
+          ip: item.ip || '192.168.1.1',
+          created: item.created || new Date().toISOString().split('T')[0],
+          owner: item.owner || 'System',
+          status: item.status || 'active',
+          threatLevel: item.threatLevel || 'secure'
+        }));
+        
+        setDomains(transformedData);
+      } catch (error) {
+        console.error('Error fetching domain permutations:', error);
+        setError('Failed to fetch domain permutations. Please try again.');
+        toast.error("Error", {
+          description: "Failed to fetch domain permutations. Please try again.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDomainPermutations();
+  }, [selectedDomainRoot]);
 
   // Handle sorting
   const handleSort = (column: string) => {
@@ -199,7 +173,7 @@ export function DomainTable() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, selectedDomainRoot]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -227,6 +201,20 @@ export function DomainTable() {
     <div className="glass-card rounded-lg overflow-hidden shadow-sm animate-scale-in">
       <div className="p-4 border-b border-border/50">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Domain Root Selector */}
+          <div className="md:col-span-2">
+            <select
+              value={selectedDomainRoot || ""}
+              onChange={(e) => setSelectedDomainRoot(e.target.value || null)}
+              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              <option value="">Select Domain Root</option>
+              {domainRoots.map((root) => (
+                <option key={root} value={root}>{root}</option>
+              ))}
+            </select>
+          </div>
+          
           {/* Search */}
           <div className="relative md:col-span-2">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
@@ -285,124 +273,159 @@ export function DomainTable() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-muted/30">
-              {columns.map((column) => (
-                <th 
-                  key={column.key}
-                  className={cn(
-                    "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
-                    column.sortable && "cursor-pointer hover:text-foreground"
-                  )}
-                  onClick={() => column.sortable && handleSort(column.key)}
-                >
-                  <div className="flex items-center gap-1">
-                    {column.label}
-                    {column.sortable && sortColumn === column.key && (
-                      <span className="text-foreground">
-                        {sortDirection === "asc" ? (
-                          <ChevronUp size={14} />
-                        ) : (
-                          <ChevronDown size={14} />
-                        )}
-                      </span>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading domain data...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <ShieldAlert className="h-8 w-8 text-rose-500 mb-4" />
+            <p className="text-muted-foreground mb-2">{error}</p>
+            <button 
+              onClick={() => setSelectedDomainRoot(selectedDomainRoot)}
+              className="text-xs py-1.5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : domains.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <Shield className="h-8 w-8 text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground">No domains found.</p>
+            {!selectedDomainRoot && domainRoots.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Please select a domain root to view permutations.
+              </p>
+            )}
+            {domainRoots.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Add domain roots in the Domain Roots section above.
+              </p>
+            )}
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="bg-muted/30">
+                {columns.map((column) => (
+                  <th 
+                    key={column.key}
+                    className={cn(
+                      "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
+                      column.sortable && "cursor-pointer hover:text-foreground"
                     )}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/30">
-            {currentPageData.map((domain) => (
-              <tr 
-                key={domain.id}
-                className="hover:bg-muted/20 transition-colors"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  {domain.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                  {domain.ip}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                  {domain.created}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                  {domain.owner}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-xs font-medium",
-                    domain.status === "active" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                    domain.status === "inactive" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                    domain.status === "pending" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                  )}>
-                    {domain.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex items-center gap-1.5">
-                    {threatIcons[domain.threatLevel as keyof typeof threatIcons]}
+                    onClick={() => column.sortable && handleSort(column.key)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {column.label}
+                      {column.sortable && sortColumn === column.key && (
+                        <span className="text-foreground">
+                          {sortDirection === "asc" ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30">
+              {currentPageData.map((domain) => (
+                <tr 
+                  key={domain.id}
+                  className="hover:bg-muted/20 transition-colors"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {domain.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {domain.ip}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {domain.created}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {domain.owner}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={cn(
                       "px-2 py-1 rounded-full text-xs font-medium",
-                      domain.threatLevel === "critical" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                      domain.threatLevel === "warning" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-                      domain.threatLevel === "secure" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                      domain.threatLevel === "false-positive" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                      domain.status === "active" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+                      domain.status === "inactive" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+                      domain.status === "pending" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                     )}>
-                      {domain.threatLevel === "false-positive" ? "False Positive" : 
-                        domain.threatLevel.charAt(0).toUpperCase() + domain.threatLevel.slice(1)}
+                      {domain.status}
                     </span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex items-center gap-1.5">
+                      {threatIcons[domain.threatLevel as keyof typeof threatIcons]}
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-xs font-medium",
+                        domain.threatLevel === "critical" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+                        domain.threatLevel === "warning" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
+                        domain.threatLevel === "secure" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+                        domain.threatLevel === "false-positive" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                      )}>
+                        {domain.threatLevel === "false-positive" ? "False Positive" : 
+                          domain.threatLevel.charAt(0).toUpperCase() + domain.threatLevel.slice(1)}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Pagination */}
-      <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-sm text-muted-foreground">
-          Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <button
-            className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          
-          <div className="flex items-center space-x-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={cn(
-                  "w-8 h-8 rounded-md text-sm",
-                  page === currentPage 
-                    ? "bg-primary text-primary-foreground" 
-                    : "border border-border/50 hover:bg-muted/20"
-                )}
-              >
-                {page}
-              </button>
-            ))}
+      {/* Pagination - only show if we have data */}
+      {!loading && !error && domains.length > 0 && (
+        <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
           </div>
           
-          <button
-            className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight size={16} />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={cn(
+                    "w-8 h-8 rounded-md text-sm",
+                    page === currentPage 
+                      ? "bg-primary text-primary-foreground" 
+                      : "border border-border/50 hover:bg-muted/20"
+                  )}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

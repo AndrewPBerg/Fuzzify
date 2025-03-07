@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -26,50 +27,71 @@ const isValidDomain = (domain: string): boolean => {
 
 export function DomainRootForm() {
   const [domainRoot, setDomainRoot] = useState("");
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddDomainRoot = (e: React.FormEvent) => {
+  const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!domainRoot.trim()) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Please enter a domain root",
-        variant: "destructive",
       });
       return;
     }
     
     if (!isValidDomain(domainRoot)) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Please enter a valid domain (e.g., example.com)",
-        variant: "destructive",
       });
       return;
     }
     
-    // In a real application, this would save to a database or state management
+    // Check if domain already exists in local storage
     const existingRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
     
     if (existingRoots.includes(domainRoot)) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "This domain root already exists",
-        variant: "destructive",
       });
       return;
     }
     
-    const updatedRoots = [...existingRoots, domainRoot];
-    localStorage.setItem("domainRoots", JSON.stringify(updatedRoots));
+    setIsSubmitting(true);
     
-    toast({
-      title: "Success",
-      description: `Domain root "${domainRoot}" has been saved`,
-    });
-    
-    setDomainRoot("");
+    try {
+      // Save domain root to backend via API
+      const response = await fetch('/api/domains', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ domainRoot }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add domain root');
+      }
+      
+      // Update local storage
+      const updatedRoots = [...existingRoots, domainRoot];
+      localStorage.setItem("domainRoots", JSON.stringify(updatedRoots));
+      
+      // Dispatch storage event to update other components
+      window.dispatchEvent(new Event('storage'));
+      
+      toast.success("Success", {
+        description: `Domain root "${domainRoot}" has been saved`,
+      });
+      
+      setDomainRoot("");
+    } catch (error) {
+      console.error('Error adding domain root:', error);
+      toast.error("Error", {
+        description: "Failed to add domain root. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -80,10 +102,16 @@ export function DomainRootForm() {
         value={domainRoot}
         onChange={(e) => setDomainRoot(e.target.value)}
         className="max-w-xs bg-background/50"
+        disabled={isSubmitting}
       />
-      <Button type="submit" size="sm" className="flex items-center gap-1">
+      <Button 
+        type="submit" 
+        size="sm" 
+        className="flex items-center gap-1"
+        disabled={isSubmitting}
+      >
         <Plus size={16} />
-        <span>Add Root</span>
+        <span>{isSubmitting ? "Adding..." : "Add Root"}</span>
       </Button>
     </form>
   );
