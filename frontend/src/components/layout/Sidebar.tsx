@@ -256,6 +256,10 @@ export function Sidebar() {
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
           detail: { left: 0, right: 0 } 
         }));
+        
+        // Also reset any direct style modifications
+        document.body.style.removeProperty('padding-left');
+        document.body.style.removeProperty('padding-right');
       }
       return;
     }
@@ -263,16 +267,27 @@ export function Sidebar() {
     // Get sidebar width and dispatch appropriate padding values
     if (sidebarRef.current) {
       const sidebarWidth = sidebarRef.current.offsetWidth;
-      const paddingValue = Math.max(0, sidebarWidth - 10); // Reduce padding by 10px for better spacing
       
+      // When locked to an edge, use the exact sidebar width for a flush fit
+      // and set the opposite side to 0 for asymmetric padding
       if (lockPosition === LockPosition.Left) {
+        // Dispatch event for components that listen to it
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-          detail: { left: paddingValue, right: 0 } 
+          detail: { left: sidebarWidth, right: 0 } 
         }));
+        
+        // Also apply directly to body for immediate effect
+        document.body.style.paddingLeft = `${sidebarWidth}px`;
+        document.body.style.paddingRight = '0px';
       } else if (lockPosition === LockPosition.Right) {
+        // Dispatch event for components that listen to it
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-          detail: { left: 0, right: paddingValue } 
+          detail: { left: 0, right: sidebarWidth } 
         }));
+        
+        // Also apply directly to body for immediate effect
+        document.body.style.paddingLeft = '0px';
+        document.body.style.paddingRight = `${sidebarWidth}px`;
       }
     }
   }, [lockPosition, position.x, useHorizontalSidebar]);
@@ -293,6 +308,12 @@ export function Sidebar() {
           setPosition({ ...newPosition, x: 0 });
           setLockPosition(LockPosition.Left);
           setIsSnapping(false);
+          
+          // Update content padding immediately for a smooth transition
+          // Left padding = sidebar width, right padding = 0 for asymmetric padding
+          window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+            detail: { left: sidebarWidth, right: 0 } 
+          }));
         }, 0);
         
         return true;
@@ -308,6 +329,16 @@ export function Sidebar() {
           setPosition({ ...newPosition, x: windowWidth - sidebarWidth });
           setLockPosition(LockPosition.Right);
           setIsSnapping(false);
+          
+          // Update content padding immediately for a smooth transition
+          // Left padding = 0, right padding = sidebar width for asymmetric padding
+          window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+            detail: { left: 0, right: sidebarWidth } 
+          }));
+          
+          // Also apply directly to body for immediate effect
+          document.body.style.paddingLeft = '0px';
+          document.body.style.paddingRight = `${sidebarWidth}px`;
         }, 0);
         
         return true;
@@ -318,6 +349,8 @@ export function Sidebar() {
           newPosition.x > LOCK_THRESHOLD && 
           newPosition.x < windowWidth - sidebarWidth - LOCK_THRESHOLD) {
         setLockPosition(LockPosition.None);
+        
+        // Reset content padding immediately
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
           detail: { left: 0, right: 0 } 
         }));
@@ -380,18 +413,26 @@ export function Sidebar() {
       // Update content padding if sidebar is locked
       if (lockPosition !== LockPosition.None && sidebarRef.current && !isLocking) {
         const sidebarWidth = sidebarRef.current.offsetWidth;
-        const paddingValue = Math.max(0, sidebarWidth - 10);
         
         if (lockPosition === LockPosition.Left) {
+          // For left-locked sidebar, add the exact position for a flush fit
+          // Maintain asymmetric padding with right side = 0
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: paddingValue + newPosition.x, right: 0 } 
+            detail: { left: sidebarWidth + newPosition.x, right: 0 } 
           }));
         } else if (lockPosition === LockPosition.Right) {
           const windowWidth = window.innerWidth;
           const rightSpace = windowWidth - newPosition.x - sidebarWidth;
+          // For right-locked sidebar, add the exact position for a flush fit
+          // Maintain asymmetric padding with left side = 0
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: 0, right: paddingValue + rightSpace } 
+            detail: { left: 0, right: sidebarWidth + rightSpace } 
           }));
+          
+          // Apply the padding directly to ensure it takes effect immediately
+          if (typeof document !== "undefined") {
+            document.documentElement.style.setProperty('--right-padding', `${sidebarWidth + rightSpace}px`);
+          }
         }
       }
     });
@@ -439,13 +480,14 @@ export function Sidebar() {
       <div
         ref={sidebarRef}
         className={cn(
-          "fixed z-50 rounded-2xl p-2 bg-background/95 backdrop-blur-lg",
+          "fixed z-50 p-2 bg-background/95 backdrop-blur-lg",
           "border border-border shadow-lg",
           "flex flex-col gap-2",
           isDragging && "opacity-80 pointer-events-none",
           isCollapsed ? "h-auto" : "h-auto",
-          lockPosition === LockPosition.Left && "border-primary/50 rounded-l-none rounded-r-2xl border-l-0",
-          lockPosition === LockPosition.Right && "border-primary/50 rounded-r-none rounded-l-2xl border-r-0",
+          lockPosition === LockPosition.None && "rounded-2xl",
+          lockPosition === LockPosition.Left && "border-primary/50 rounded-l-none rounded-r-2xl border-l-0 shadow-none",
+          lockPosition === LockPosition.Right && "border-primary/50 rounded-r-none rounded-l-2xl border-r-0 shadow-none",
           isSnapping ? "transition-all duration-300" : "transition-transform duration-200"
         )}
         style={{ 

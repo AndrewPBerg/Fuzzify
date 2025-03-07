@@ -187,23 +187,41 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = () => {
-    // In a real app, save to backend here
-    console.log("Saving settings:", formState);
-    
-    // Apply theme setting
-    if (formState.theme) {
-      setTheme(formState.theme as "light" | "dark" | "system");
+  const handleSave = async () => {
+    try {
+      // Save settings to backend via API
+      const response = await fetch('/api/user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formState),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      // Apply theme setting
+      if (formState.theme) {
+        setTheme(formState.theme as "light" | "dark" | "system");
+      }
+      
+      // Store horizontal sidebar preference in localStorage
+      localStorage.setItem("horizontalSidebar", String(formState["Horizontal Sidebar"]));
+      
+      // Show toast notification using Sonner
+      toast.success("Settings saved", {
+        description: "Your preferences have been updated successfully.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error("Error saving settings", {
+        description: "There was a problem saving your preferences. Please try again.",
+        duration: 3000,
+      });
     }
-    
-    // Store horizontal sidebar preference in localStorage
-    localStorage.setItem("horizontalSidebar", String(formState["Horizontal Sidebar"]));
-    
-    // Show toast notification using Sonner
-    toast.success("Settings saved", {
-      description: "Your preferences have been updated successfully.",
-      duration: 3000,
-    });
   };
 
   return (

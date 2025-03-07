@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -43,6 +42,10 @@
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
     --sidebar-ring: 221 83% 53%;
+    
+    /* Custom properties for sidebar padding */
+    --left-padding: 0px;
+    --right-padding: 0px;
   }
 
   .dark {
@@ -118,6 +121,7 @@
   }
 
   .page-container {
-    @apply p-6 md:p-8 animate-fade-in;
+    @apply animate-fade-in;
+    padding: 1.5rem;
   }
 }

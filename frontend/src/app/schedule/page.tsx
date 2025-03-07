@@ -137,12 +137,15 @@ export default function SchedulePage() {
                       type="button"
                       className={`flex items-center justify-center gap-2 p-2 rounded-md border ${
                         scheduleType === option.id 
-                          ? "border-primary bg-primary/10 text-primary" 
-                          : "border-border/50 bg-background/50 hover:bg-background"
+                          ? "bg-primary/10 text-primary border-primary" 
+                          : domainRoots.length === 0
+                            ? "border-border/30 bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
+                            : "border-border/50 bg-background/50 hover:bg-background text-foreground"
                       }`}
-                      onClick={() => setScheduleType(option.id)}
+                      onClick={() => domainRoots.length > 0 && setScheduleType(option.id)}
+                      disabled={domainRoots.length === 0}
                     >
-                      <option.icon size={16} />
+                      <option.icon size={16} className={domainRoots.length === 0 ? "opacity-50" : ""} />
                       <span className="text-sm">{option.label}</span>
                     </button>
                   ))}
@@ -161,7 +164,8 @@ export default function SchedulePage() {
                     max="168"
                     value={customHours}
                     onChange={(e) => setCustomHours(parseInt(e.target.value))}
-                    className="w-full"
+                    className={`w-full ${domainRoots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={domainRoots.length === 0}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>1 hour</span>
@@ -172,10 +176,14 @@ export default function SchedulePage() {
               
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  domainRoots.length === 0
+                    ? "bg-primary/50 text-primary-foreground/70 cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
                 disabled={domainRoots.length === 0}
               >
-                Create Schedule
+                {domainRoots.length === 0 ? "No Domain Roots Available" : "Create Schedule"}
               </button>
             </form>
           </div>
