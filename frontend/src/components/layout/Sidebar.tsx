@@ -1,4 +1,4 @@
-import { useCallback,useState, useEffect, useRef, memo } from "react";
+import { useCallback, useState, useEffect, useRef, memo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -29,12 +29,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/components/ui/ThemeProvider";
+import { toast } from "sonner";
 
 // Define Position type
 type Position = {
   x: number;
   y: number;
 };
+
+// Constants for sidebar locking
+const LOCK_THRESHOLD = 20; // Distance from edge to trigger lock
+const SNAP_ANIMATION_DURATION = 300; // ms
+
+// Enum for lock positions
+enum LockPosition {
+  None = "none",
+  Left = "left",
+  Right = "right"
+}
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -43,8 +56,8 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-// Mobile navigation component
-const MobileNavigation = memo(({ pathname }: { pathname: string }) => {
+// Horizontal sidebar component
+const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
   return (
     <>
       {/* Add a spacer div to prevent content from being hidden under the navbar */}
@@ -124,7 +137,7 @@ const MobileNavigation = memo(({ pathname }: { pathname: string }) => {
   );
 });
 
-MobileNavigation.displayName = "MobileNavigation";
+HorizontalSidebar.displayName = "HorizontalSidebar";
 
 // Memoize navigation items to prevent re-renders
 const NavigationItems = memo(({ pathname, isCollapsed }: { pathname: string, isCollapsed: boolean }) => {
@@ -171,7 +184,11 @@ NavigationItems.displayName = "NavigationItems";
 
 export function Sidebar() {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [useHorizontalSidebar, setUseHorizontalSidebar] = useState(false);
+  const [lockPosition, setLockPosition] = useState<LockPosition>(LockPosition.None);
+  const [isSnapping, setIsSnapping] = useState(false);
   const [position, setPosition] = useState<Position>(() => {
     // Initialize position from localStorage or default
     if (typeof window !== "undefined") {
@@ -184,6 +201,131 @@ export function Sidebar() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ x: number; y: number; startPosition: Position } | null>(null);
   const pathname = usePathname();
+
+  // Check for horizontal sidebar preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // If on mobile, always use horizontal sidebar
+      if (isMobile) {
+        setUseHorizontalSidebar(true);
+        return;
+      }
+      
+      // Otherwise, check user preference from settings
+      const horizontalSidebarPref = localStorage.getItem("horizontalSidebar");
+      setUseHorizontalSidebar(horizontalSidebarPref === "true");
+
+      // Listen for changes to horizontal sidebar preference
+      const handleHorizontalSidebarChange = (event: CustomEvent) => {
+        setUseHorizontalSidebar(event.detail.enabled);
+      };
+
+      window.addEventListener("horizontalSidebarChange", 
+        handleHorizontalSidebarChange as EventListener);
+      
+      return () => {
+        window.removeEventListener("horizontalSidebarChange", 
+          handleHorizontalSidebarChange as EventListener);
+      };
+    }
+  }, [isMobile]);
+
+  // Reset body padding when component unmounts or when using horizontal sidebar
+  useEffect(() => {
+    // Reset any padding when using horizontal sidebar
+    if (useHorizontalSidebar && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+        detail: { left: 0, right: 0 } 
+      }));
+    }
+    
+    return () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: 0, right: 0 } 
+        }));
+      }
+    };
+  }, [useHorizontalSidebar]);
+
+  // Apply content padding when sidebar is locked
+  useEffect(() => {
+    if (lockPosition === LockPosition.None || useHorizontalSidebar) {
+      // Reset padding by dispatching event with zero values
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: 0, right: 0 } 
+        }));
+      }
+      return;
+    }
+
+    // Get sidebar width and dispatch appropriate padding values
+    if (sidebarRef.current) {
+      const sidebarWidth = sidebarRef.current.offsetWidth;
+      const paddingValue = Math.max(0, sidebarWidth - 10); // Reduce padding by 10px for better spacing
+      
+      if (lockPosition === LockPosition.Left) {
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: paddingValue, right: 0 } 
+        }));
+      } else if (lockPosition === LockPosition.Right) {
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: 0, right: paddingValue } 
+        }));
+      }
+    }
+  }, [lockPosition, position.x, useHorizontalSidebar]);
+
+  // Function to check if sidebar should lock to an edge
+  const checkForEdgeLock = useCallback((newPosition: Position) => {
+    if (sidebarRef.current) {
+      const windowWidth = window.innerWidth;
+      const sidebarWidth = sidebarRef.current.offsetWidth;
+      
+      // Check for left edge lock
+      if (newPosition.x <= LOCK_THRESHOLD) {
+        // Close to left edge - lock it
+        setIsSnapping(true);
+        
+        // Animate to edge
+        setTimeout(() => {
+          setPosition({ ...newPosition, x: 0 });
+          setLockPosition(LockPosition.Left);
+          setIsSnapping(false);
+        }, 0);
+        
+        return true;
+      }
+      
+      // Check for right edge lock
+      if (newPosition.x >= windowWidth - sidebarWidth - LOCK_THRESHOLD) {
+        // Close to right edge - lock it
+        setIsSnapping(true);
+        
+        // Animate to edge
+        setTimeout(() => {
+          setPosition({ ...newPosition, x: windowWidth - sidebarWidth });
+          setLockPosition(LockPosition.Right);
+          setIsSnapping(false);
+        }, 0);
+        
+        return true;
+      }
+      
+      // If we're locked but dragged away from the edge, unlock
+      if (lockPosition !== LockPosition.None && 
+          newPosition.x > LOCK_THRESHOLD && 
+          newPosition.x < windowWidth - sidebarWidth - LOCK_THRESHOLD) {
+        setLockPosition(LockPosition.None);
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: 0, right: 0 } 
+        }));
+      }
+    }
+    
+    return false;
+  }, [lockPosition]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -228,9 +370,32 @@ export function Sidebar() {
         newPosition.y = Math.max(0, Math.min(newPosition.y, maxY));
       }
 
-      setPosition(newPosition);
+      // Check if we should lock to edge
+      const isLocking = checkForEdgeLock(newPosition);
+      
+      if (!isLocking) {
+        setPosition(newPosition);
+      }
+
+      // Update content padding if sidebar is locked
+      if (lockPosition !== LockPosition.None && sidebarRef.current && !isLocking) {
+        const sidebarWidth = sidebarRef.current.offsetWidth;
+        const paddingValue = Math.max(0, sidebarWidth - 10);
+        
+        if (lockPosition === LockPosition.Left) {
+          window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+            detail: { left: paddingValue + newPosition.x, right: 0 } 
+          }));
+        } else if (lockPosition === LockPosition.Right) {
+          const windowWidth = window.innerWidth;
+          const rightSpace = windowWidth - newPosition.x - sidebarWidth;
+          window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+            detail: { left: 0, right: paddingValue + rightSpace } 
+          }));
+        }
+      }
     });
-  }, [isDragging]);
+  }, [isDragging, lockPosition, checkForEdgeLock]);
 
   const handleMouseUp = useCallback(() => {
     if (!isDragging) return;
@@ -246,6 +411,10 @@ export function Sidebar() {
     document.body.style.userSelect = '';
   }, [isDragging, position]);
 
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
+
   // Attach and cleanup event listeners
   useEffect(() => {
     if (isDragging) {
@@ -259,14 +428,12 @@ export function Sidebar() {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const toggleCollapse = useCallback(() => {
-    setIsCollapsed(prev => !prev);
-  }, []);
-
-  if (isMobile) {
-    return <MobileNavigation pathname={pathname} />;
+  // If using horizontal sidebar (mobile or user preference), render horizontal version
+  if (useHorizontalSidebar) {
+    return <HorizontalSidebar pathname={pathname} />;
   }
 
+  // Otherwise render the floating sidebar
   return (
     <TooltipProvider delayDuration={300}>
       <div
@@ -274,15 +441,20 @@ export function Sidebar() {
         className={cn(
           "fixed z-50 rounded-2xl p-2 bg-background/95 backdrop-blur-lg",
           "border border-border shadow-lg",
-          "flex flex-col gap-2 transition-all duration-300",
+          "flex flex-col gap-2",
           isDragging && "opacity-80 pointer-events-none",
-          isCollapsed ? "h-auto" : "h-auto"
+          isCollapsed ? "h-auto" : "h-auto",
+          lockPosition === LockPosition.Left && "border-primary/50 rounded-l-none rounded-r-2xl border-l-0",
+          lockPosition === LockPosition.Right && "border-primary/50 rounded-r-none rounded-l-2xl border-r-0",
+          isSnapping ? "transition-all duration-300" : "transition-transform duration-200"
         )}
         style={{ 
           left: `${position.x}px`, 
           top: `${position.y}px`,
           transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-          transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+          transition: isDragging ? 'none' : isSnapping 
+            ? `all ${SNAP_ANIMATION_DURATION}ms ease-out` 
+            : 'transform 0.2s ease-out'
         }}
       >
         {/* Drag Handle */}
@@ -306,7 +478,11 @@ export function Sidebar() {
               <span className="sr-only">Account menu</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="right" className="w-56 mt-1">
+          <DropdownMenuContent 
+            align={lockPosition === LockPosition.Right ? "end" : "start"} 
+            side={lockPosition === LockPosition.Right ? "left" : "right"} 
+            className="w-56 mt-1"
+          >
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
@@ -335,7 +511,10 @@ export function Sidebar() {
                 <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
+            <TooltipContent 
+              side={lockPosition === LockPosition.Right ? "left" : "right"} 
+              sideOffset={8}
+            >
               <span>Toggle Theme</span>
             </TooltipContent>
           </Tooltip>
@@ -357,7 +536,10 @@ export function Sidebar() {
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
+          <TooltipContent 
+            side={lockPosition === LockPosition.Right ? "left" : "right"} 
+            sideOffset={8}
+          >
             <span>{isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}</span>
           </TooltipContent>
         </Tooltip>

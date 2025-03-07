@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FlaskConical } from "lucide-react";
+import { useTheme } from "@/components/ui/ThemeProvider";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
 // Define settings sections and fields
 const settingsSections = [
@@ -47,6 +50,30 @@ const settingsSections = [
         label: "Email Address",
         type: "email",
         description: "Email used for notifications and communications"
+      }
+    ]
+  },
+  {
+    id: "Appearance",
+    title: "Appearance",
+    description: "Manage your appearance settings",
+    fields: [
+      {
+        id: "theme",
+        label: "Theme",
+        type: "select",
+        description: "Select your preferred theme",
+        options: [
+          { value: "light", label: "Light" },
+          { value: "dark", label: "Dark" },
+          { value: "system", label: "System" }
+        ]
+      },
+      {
+        id: "Horizontal Sidebar",
+        label: "Horizontal Sidebar",
+        type: "toggle",
+        description: "Enable horizontal sidebar navigation"
       }
     ]
   },
@@ -103,12 +130,16 @@ const settingsSections = [
 ];
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState("general");
   const [formState, setFormState] = useState({
     notifications: true,
     timezone: "utc",
     name: "Admin User",
     email: "admin@example.com",
+    theme: "system",
+    "Horizontal Sidebar": isMobile ? true : false,
     "2fa": false,
     session: "60",
     betaFeatures: false,
@@ -116,18 +147,63 @@ export default function SettingsPage() {
     advancedMetrics: false
   });
 
+  // Update form state with current theme when component mounts
+  useEffect(() => {
+    setFormState(prev => ({
+      ...prev,
+      theme: theme
+    }));
+
+    // Initialize horizontal sidebar setting from localStorage
+    if (typeof window !== "undefined" && !isMobile) {
+      const horizontalSidebarPref = localStorage.getItem("horizontalSidebar");
+      setFormState(prev => ({
+        ...prev,
+        "Horizontal Sidebar": horizontalSidebarPref === "true"
+      }));
+    }
+  }, [theme, isMobile]);
+
   const handleInputChange = (id: string, value: string | boolean) => {
     setFormState(prev => ({
       ...prev,
       [id]: value
     }));
+
+    // Apply theme change immediately
+    if (id === "theme") {
+      setTheme(value as "light" | "dark" | "system");
+    }
+
+    // Apply horizontal sidebar setting immediately
+    if (id === "Horizontal Sidebar") {
+      localStorage.setItem("horizontalSidebar", String(value));
+      // Dispatch a custom event to notify the sidebar component
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("horizontalSidebarChange", { 
+          detail: { enabled: value } 
+        }));
+      }
+    }
   };
 
   const handleSave = () => {
     // In a real app, save to backend here
     console.log("Saving settings:", formState);
-    // Show toast
-    alert("Settings saved successfully!");
+    
+    // Apply theme setting
+    if (formState.theme) {
+      setTheme(formState.theme as "light" | "dark" | "system");
+    }
+    
+    // Store horizontal sidebar preference in localStorage
+    localStorage.setItem("horizontalSidebar", String(formState["Horizontal Sidebar"]));
+    
+    // Show toast notification using Sonner
+    toast.success("Settings saved", {
+      description: "Your preferences have been updated successfully.",
+      duration: 3000,
+    });
   };
 
   return (

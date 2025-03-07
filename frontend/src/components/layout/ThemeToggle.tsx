@@ -1,13 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [systemTheme, setSystemTheme] = useState<"dark" | "light">("light");
+
+  // Detect system theme
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? "dark" : "light");
+    };
+    
+    // Set initial value
+    setSystemTheme(mediaQuery.matches ? "dark" : "light");
+    
+    // Listen for changes
+    mediaQuery.addEventListener("change", handleChange);
+    
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -19,8 +37,14 @@ export function ThemeToggle({ className }: { className?: string }) {
   }
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    // Cycle through themes: light -> dark -> system -> light
+    if (theme === "light") setTheme("dark");
+    else if (theme === "dark") setTheme("system");
+    else setTheme("light");
   };
+
+  // Determine which icon to show based on current theme
+  const actualTheme = theme === "system" ? systemTheme : theme;
 
   return (
     <button
@@ -36,7 +60,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         size={18}
         className={cn(
           "text-primary absolute transition-all duration-300",
-          theme === "dark" ? "opacity-0 scale-50" : "opacity-100 scale-100"
+          theme === "light" ? "opacity-100 scale-100" : "opacity-0 scale-50"
         )}
       />
       <Moon
@@ -44,6 +68,13 @@ export function ThemeToggle({ className }: { className?: string }) {
         className={cn(
           "text-primary absolute transition-all duration-300",
           theme === "dark" ? "opacity-100 scale-100" : "opacity-0 scale-50"
+        )}
+      />
+      <Monitor
+        size={18}
+        className={cn(
+          "text-primary absolute transition-all duration-300",
+          theme === "system" ? "opacity-100 scale-100" : "opacity-0 scale-50"
         )}
       />
     </button>
