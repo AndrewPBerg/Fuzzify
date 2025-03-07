@@ -7,6 +7,7 @@ const nextConfig = {
   webpack: (config) => {
     return config;
   },
+  output: 'export',
 };
 
 module.exports = nextConfig; 
