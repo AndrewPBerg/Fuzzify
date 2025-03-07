@@ -1,4 +1,4 @@
-import { useCallback,useState, useEffect, useRef } from "react";
+import { useCallback,useState, useEffect, useRef, memo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -42,6 +42,49 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+// Memoize navigation items to prevent re-renders
+const NavigationItems = memo(({ pathname, isCollapsed }: { pathname: string, isCollapsed: boolean }) => {
+  if (isCollapsed) return null;
+  
+  return (
+    <div className="flex flex-col gap-1.5 py-1">
+      {navigation.map((item) => {
+        const isActive = pathname === item.href;
+        return (
+          <Tooltip key={item.name}>
+            <TooltipTrigger asChild>
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center justify-center h-9 w-9 rounded-full transition-colors duration-200",
+                  "hover:bg-muted",
+                  isActive 
+                    ? "bg-primary text-primary-foreground" 
+                    : "text-muted-foreground bg-muted/50"
+                )}
+              >
+                <item.icon 
+                  size={18} 
+                  className={cn(
+                    "transition-colors duration-200",
+                    isActive ? "text-primary-foreground" : "text-muted-foreground"
+                  )} 
+                />
+                <span className="sr-only">{item.name}</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              <span>{item.name}</span>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+});
+
+NavigationItems.displayName = "NavigationItems";
+
 export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -55,247 +98,86 @@ export function Sidebar() {
   });
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  // const dragRef = useRef<{
-  //   isDragging: boolean
-  //   startX: number
-  //   startY: number
-  //   startPositionX: number
-  //   startPositionY: number
-  // }>({
-  //   isDragging: false,
-  //   startX: 0,
-  //   startY: 0,
-  //   startPositionX: 0,
-  //   startPositionY: 0,
-  // });
-
+  const dragStartRef = useRef<{ x: number; y: number; startPosition: Position } | null>(null);
   const pathname = usePathname();
 
-  const dragRef = useRef<{
-    isDragging: boolean
-    startX: number
-    startY: number
-    startPositionX: number
-    startPositionY: number
-  }>({
-    isDragging: false,
-    startX: 0,
-    startY: 0,
-    startPositionX: 0,
-    startPositionY: 0,
-  })
-  
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      const sidebar = sidebarRef.current
-      if (!sidebar) return
-  
-      dragRef.current = {
-        isDragging: true,
-        startX: e.clientX,
-        startY: e.clientY,
-        startPositionX: position.x,
-        startPositionY: position.y,
-      }
-      setIsDragging(true)
-    },
-    [position],
-  )
-  
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPosition: position
+    };
+    setIsDragging(true);
+
+    // Add cursor styles to body during drag
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+  }, [position]);
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragRef.current.isDragging) return
-  
-    const sidebar = sidebarRef.current
-    if (!sidebar) return
-  
-    const deltaX = e.clientX - dragRef.current.startX
-    const deltaY = e.clientY - dragRef.current.startY
-  
-    // Calculate new position
-    let newX = dragRef.current.startPositionX + deltaX
-    let newY = dragRef.current.startPositionY + deltaY
-  
-    // Get viewport dimensions
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const sidebarRect = sidebar.getBoundingClientRect()
-  
-    // Bound the position within the viewport
-    newX = Math.max(0, Math.min(newX, viewportWidth - sidebarRect.width))
-    newY = Math.max(0, Math.min(newY, viewportHeight - sidebarRect.height))
-  
-    setPosition({ x: newX, y: newY })
-  }, [])
-  
+    if (!isDragging || !dragStartRef.current) return;
+
+    // Use requestAnimationFrame for smooth updates
+    requestAnimationFrame(() => {
+      if (!dragStartRef.current) return;
+
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+
+      // Calculate new position
+      const newPosition = {
+        x: dragStartRef.current.startPosition.x + deltaX,
+        y: dragStartRef.current.startPosition.y + deltaY
+      };
+
+      // Bound position within viewport
+      if (sidebarRef.current) {
+        const rect = sidebarRef.current.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+
+        newPosition.x = Math.max(0, Math.min(newPosition.x, maxX));
+        newPosition.y = Math.max(0, Math.min(newPosition.y, maxY));
+      }
+
+      setPosition(newPosition);
+    });
+  }, [isDragging]);
+
   const handleMouseUp = useCallback(() => {
-    if (!dragRef.current.isDragging) return
-  
-    dragRef.current.isDragging = false
-    setIsDragging(false)
-    localStorage.setItem("sidebarPosition", JSON.stringify(position))
-  }, [position])
-  
-  // Add and remove event listeners
+    if (!isDragging) return;
+
+    setIsDragging(false);
+    dragStartRef.current = null;
+
+    // Save position to localStorage
+    localStorage.setItem("sidebarPosition", JSON.stringify(position));
+
+    // Reset cursor styles
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, [isDragging, position]);
+
+  // Attach and cleanup event listeners
   useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove)
-    document.addEventListener("mouseup", handleMouseUp)
-  
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
     }
-  }, [handleMouseMove, handleMouseUp])
-  
-  // // Handle responsive behavior
-  // useEffect(() => {
-  //   const handleResize = () => {
-  //     const newIsMobile = window.innerWidth < 768;
-  //     setIsMobile(newIsMobile);
-      
-  //     // If switching to mobile, reset position to a mobile-friendly location
-  //     if (newIsMobile && !isMobile) {
-  //       setPosition({ x: 5, y: 5 });
-  //     }
-  //   };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  //   handleResize();
-  //   window.addEventListener("resize", handleResize);
-  //   return () => window.removeEventListener("resize", handleResize);
-  // }, [isMobile]);
-
-  // // Save position to localStorage whenever it changes
-  // useEffect(() => {
-  //   if (typeof window !== "undefined") {
-  //     localStorage.setItem("sidebarPosition", JSON.stringify(position));
-  //   }
-  // }, [position]);
-
-  // // Handle dragging
-  // const handleMouseDown = (e: React.MouseEvent) => {
-  //   if (sidebarRef.current && e.target === sidebarRef.current) {
-  //     setIsDragging(true);
-  //     dragRef.current = {
-  //       isDragging: true,
-  //       startX: e.clientX,
-  //       startY: e.clientY,
-  //       startPositionX: position.x,
-  //       startPositionY: position.y
-  //     };
-      
-  //     // Prevent text selection during drag
-  //     e.preventDefault();
-  //   }
-  // };
-
-  // const handleTouchStart = (e: React.TouchEvent) => {
-  //   if (sidebarRef.current && e.target === sidebarRef.current) {
-  //     setIsDragging(true);
-  //     const touch = e.touches[0];
-  //     dragRef.current = {
-  //       isDragging: true,
-  //       startX: touch.clientX,
-  //       startY: touch.clientY,
-  //       startPositionX: position.x,
-  //       startPositionY: position.y
-  //     };
-  //   }
-  // };
-
-  // const handleMouseMove = (e: MouseEvent) => {
-  //   if (isDragging && dragRef.current.isDragging) {
-  //     const deltaX = e.clientX - dragRef.current.startX;
-  //     const deltaY = e.clientY - dragRef.current.startY;
-      
-  //     updatePosition(
-  //       dragRef.current.startPositionX + deltaX,
-  //       dragRef.current.startPositionY + deltaY
-  //     );
-  //   }
-  // };
-
-  // const handleTouchMove = (e: TouchEvent) => {
-  //   if (isDragging && dragRef.current.isDragging) {
-  //     const touch = e.touches[0];
-  //     const deltaX = touch.clientX - dragRef.current.startX;
-  //     const deltaY = touch.clientY - dragRef.current.startY;
-      
-  //     updatePosition(
-  //       dragRef.current.startPositionX + deltaX,
-  //       dragRef.current.startPositionY + deltaY
-  //     );
-      
-  //     // Prevent scrolling while dragging
-  //     e.preventDefault();
-  //   }
-  // };
-
-  // const updatePosition = (x: number, y: number) => {
-  //   // Keep sidebar within viewport
-  //   const sidebarWidth = sidebarRef.current?.offsetWidth || 60;
-  //   const sidebarHeight = sidebarRef.current?.offsetHeight || 300;
-    
-  //   const maxX = window.innerWidth - sidebarWidth;
-  //   const maxY = window.innerHeight - sidebarHeight;
-    
-  //   setPosition({
-  //     x: Math.max(0, Math.min(x, maxX)),
-  //     y: Math.max(0, Math.min(y, maxY))
-  //   });
-  // };
-
-  // const handleMouseUp = () => {
-  //   setIsDragging(false);
-  //   dragRef.current.isDragging = false;
-  // };
-
-  // const handleTouchEnd = () => {
-  //   setIsDragging(false);
-  //   dragRef.current.isDragging = false;
-  // };
-
-  // // Add event listeners
-  // useEffect(() => {
-  //   document.addEventListener('mousemove', handleMouseMove);
-  //   document.addEventListener('mouseup', handleMouseUp);
-  //   document.addEventListener('touchmove', handleTouchMove, { passive: false });
-  //   document.addEventListener('touchend', handleTouchEnd);
-    
-  //   return () => {
-  //     document.removeEventListener('mousemove', handleMouseMove);
-  //     document.removeEventListener('mouseup', handleMouseUp);
-  //     document.removeEventListener('touchmove', handleTouchMove);
-  //     document.removeEventListener('touchend', handleTouchEnd);
-  //   };
-  // }, [isDragging]);
-
-  // // Ensure sidebar stays within viewport on window resize
-  // useEffect(() => {
-  //   const handleWindowResize = () => {
-  //     if (sidebarRef.current) {
-  //       const sidebarWidth = sidebarRef.current.offsetWidth;
-  //       const sidebarHeight = sidebarRef.current.offsetHeight;
-        
-  //       const maxX = window.innerWidth - sidebarWidth;
-  //       const maxY = window.innerHeight - sidebarHeight;
-        
-  //       // If sidebar is outside viewport after resize, reposition it
-  //       if (position.x > maxX || position.y > maxY) {
-  //         setPosition({
-  //           x: Math.min(position.x, maxX),
-  //           y: Math.min(position.y, maxY)
-  //         });
-  //       }
-  //     }
-  //   };
-    
-  //   window.addEventListener('resize', handleWindowResize);
-  //   return () => window.removeEventListener('resize', handleWindowResize);
-  // }, [position]);
-
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -305,12 +187,14 @@ export function Sidebar() {
           "fixed z-50 rounded-2xl p-2 bg-background/95 backdrop-blur-lg",
           "border border-border shadow-lg",
           "flex flex-col gap-2 transition-all duration-300",
-          isDragging && "opacity-80",
+          isDragging && "opacity-80 pointer-events-none",
           isCollapsed ? "h-auto" : "h-auto"
         )}
         style={{ 
           left: `${position.x}px`, 
           top: `${position.y}px`,
+          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out'
         }}
       >
         {/* Drag Handle */}
@@ -353,42 +237,7 @@ export function Sidebar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Navigation */}
-        {!isCollapsed && (
-          <div className="flex flex-col gap-1.5 py-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Tooltip key={item.name}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center justify-center h-9 w-9 rounded-full transition-colors duration-200",
-                        "hover:bg-muted",
-                        isActive 
-                          ? "bg-primary text-primary-foreground" 
-                          : "text-muted-foreground bg-muted/50"
-                      )}
-                    >
-                      <item.icon 
-                        size={18} 
-                        className={cn(
-                          "transition-colors duration-200",
-                          isActive ? "text-primary-foreground" : "text-muted-foreground"
-                        )} 
-                      />
-                      <span className="sr-only">{item.name}</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={8}>
-                    <span>{item.name}</span>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </div>
-        )}
+        <NavigationItems pathname={pathname} isCollapsed={isCollapsed} />
 
         {/* Theme toggle */}
         {!isCollapsed && (
