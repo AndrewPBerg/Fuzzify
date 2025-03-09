@@ -15,6 +15,8 @@ export async function GET() {
     });
 
     if (!response.ok) {
+      const errorData = await response.json(); // Parse the error response from the backend
+      console.error('Backend error:', errorData);
       throw new Error(`Error fetching domain roots: ${response.statusText}`);
     }
 
@@ -31,8 +33,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // Parse the request body
     const { domainRoot } = await request.json();
-    
+
+    // Validate the input
     if (!domainRoot) {
       return NextResponse.json(
         { error: 'Domain root is required' },
@@ -49,10 +53,12 @@ export async function POST(request: Request) {
       body: JSON.stringify({ domainRoot }),
     });
 
+    // Handle non-OK responses from the backend
     if (!response.ok) {
       throw new Error(`Error adding domain root: ${response.statusText}`);
     }
 
+    // Return the successful response from the backend
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
@@ -62,4 +68,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

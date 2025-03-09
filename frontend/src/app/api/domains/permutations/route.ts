@@ -9,10 +9,11 @@ export async function GET(request: Request) {
     // Get domain root from query parameters
     const { searchParams } = new URL(request.url);
     const domainRoot = searchParams.get('domain');
-    
+
+    // Validate the domain root
     if (!domainRoot) {
       return NextResponse.json(
-        { error: 'Domain root is required' },
+        { error: 'Domain root is required as a query parameter (e.g., /api/permutations?domain=example.com)' },
         { status: 400 }
       );
     }
@@ -25,10 +26,12 @@ export async function GET(request: Request) {
       },
     });
 
+    // Handle non-OK responses from the backend
     if (!response.ok) {
       throw new Error(`Error fetching domain permutations: ${response.statusText}`);
     }
 
+    // Return the successful response from the backend
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
@@ -38,4 +41,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
