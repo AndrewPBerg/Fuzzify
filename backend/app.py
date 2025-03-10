@@ -139,6 +139,27 @@ def add_permutations():
 
     return jsonify({"message": "Permutations successfully added (duplicates skipped)"}), 201
 
+@app.route('/api/permutations', methods=['GET'])
+def get_permutations():
+    """API endpoint to fetch stored permutations for a given domain."""
+    if DEBUG:
+        logger.debug("Received request to fetch permutations.")
+
+    domain_name = request.args.get('domain_name')
+
+    if not domain_name:
+        logger.error("Missing 'domain_name' parameter in request.")
+        return jsonify({"error": "domain_name parameter is required"}), 400
+
+    with Session(engine) as session:
+        permutations = session.exec(select(Permutation).where(Permutation.domain_name == domain_name)).all()
+
+    if not permutations:
+        return jsonify({"message": "No permutations found for this domain."}), 404
+
+    return jsonify([perm.dict() for perm in permutations])
+
+
 # Startup Sequence
 if __name__ == '__main__':
     time.sleep(5)  # Allow database & services to start
