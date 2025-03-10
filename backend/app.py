@@ -1,13 +1,12 @@
-from flask import Flask, jsonify, request  # Add request to imports
-from sqlmodel import SQLModel, create_engine, Session
+from flask import Flask, jsonify, request
+from sqlmodel import SQLModel, create_engine, Session, select
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from google.cloud import pubsub_v1
 import logging
 import time
-import dnstwist  # For running DNSTwist
-from models import User, Domain, Permutation  # Import your models
+from models import User, Domain, Permutation
 
 # Enable Debugging for Logs
 DEBUG = True
@@ -17,13 +16,13 @@ logger = logging.getLogger(__name__)
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
 
-#  Load environment variables
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-#  Correct Database Connection
+# Database Connection
 DATABASE_URL = os.getenv("DB_URL", "mysql://user:password@db:3306/mydatabase")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
@@ -34,16 +33,16 @@ engine = create_engine(DATABASE_URL)
 def create_db_and_tables():
     """Ensures that the database schema matches our models."""
     try:
-        from models import User, Domain, Permutation  #  Import models *inside* the function
+        from models import User, Domain, Permutation  # Import models inside function
         if DEBUG:
             logger.debug("Initializing database schema...")
         with engine.begin() as conn:  # Ensures schema is committed properly
             SQLModel.metadata.create_all(conn)
         if DEBUG:
-            logger.debug(" Database schema initialized successfully.")
+            logger.debug("Database schema initialized successfully.")
     except Exception as e:
-        logger.error(f" Error initializing database schema: {e}")
-        raise  #  see errors in logs
+        logger.error(f"Error initializing database schema: {e}")
+        raise
 
 @app.route('/')
 def home():
@@ -59,13 +58,13 @@ def db_test():
             result = connection.execute("SHOW TABLES;")
             tables = [row[0] for row in result]
             if DEBUG:
-                logger.debug(f" Found tables: {tables}")
+                logger.debug(f"Found tables: {tables}")
         return jsonify({"tables": tables})
     except Exception as e:
-        logger.error(f" Database error: {str(e)}")
+        logger.error(f"Database error: {str(e)}")
         return jsonify({"error": str(e)})
 
-# ✅ Setup Google Cloud Pub/Sub Client
+#  Setup Google Cloud Pub/Sub Client
 PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
 publisher = pubsub_v1.PublisherClient()
 topic_path = f"projects/test-project/topics/test-topic"
@@ -81,95 +80,66 @@ def test_pubsub():
         future = publisher.publish(topic_path, b"Hello, Pub/Sub!")
         msg_id = future.result()
         if DEBUG:
-            logger.debug(f" Successfully published message with ID: {msg_id}")
+            logger.debug(f"Successfully published message with ID: {msg_id}")
         return jsonify({"message": "Published to Pub/Sub", "msg_id": msg_id})
     except Exception as e:
-        logger.error(f" Pub/Sub error: {str(e)}")
+        logger.error(f"Pub/Sub error: {str(e)}")
         return jsonify({"error": str(e)})
 
-# Route to add a new domain
-@app.route('/add-domain', methods=['POST'])
-def add_domain():
-    """Adds a new domain to the database and runs DNSTwist."""
-    try:
-        # Get JSON data from the request
-        data = request.json
-        domain_name = data.get("domain_name")
-        user_id = data.get("user_id")
+@app.route('/api/permutations', methods=['POST'])
+def add_permutations():
+    """API endpoint to insert permutations, ensuring domain exists and duplicates are prevented."""
+    if DEBUG:
+        logger.debug("Received request to add permutations.")
 
-        # Validate input
-        if not domain_name or not user_id:
-            return jsonify({"error": "Both domain_name and user_id are required"}), 400
+    data = request.json  # Get JSON from the request
+    if DEBUG:
+        logger.debug(f"Data received: {data}")
 
-        # Check if the user exists
-        with Session(engine) as session:
-            user = session.get(User, user_id)
-            if not user:
-                return jsonify({"error": "User not found"}), 404
+    # Check required fields
+    if not data or 'domain_name' not in data or 'permutations' not in data:
+        logger.error("Missing 'domain_name' or 'permutations' in request.")
+        return jsonify({"error": "domain_name and permutations fields are required"}), 400
 
-            # Check if the domain already exists
-            existing_domain = session.query(Domain).filter(Domain.domain_name == domain_name).first()
-            if existing_domain:
-                return jsonify({"error": "Domain already exists"}), 400
+    domain_name = data['domain_name']
+    permutations_data = data['permutations']
 
-            # Create a new domain instance
-            new_domain = Domain(domain_name=domain_name, user_id=user_id)
+    with Session(engine) as session:
+        #  Check if domain exists
+        domain = session.exec(select(Domain).where(Domain.domain_name == domain_name)).first()
 
-            # Add to the database
+        #  If domain doesn't exist create it
+        if not domain:
+            new_domain = Domain(domain_name=domain_name, user_id="auto_user", total_scans=0)
             session.add(new_domain)
             session.commit()
+            session.refresh(new_domain)  # Ensure it's saved
 
-        if DEBUG:
-            logger.debug(f"Added new domain: {domain_name}")
+        #  Insert permutations if they don't already exist
+        for perm in permutations_data:
+            existing_perm = session.exec(select(Permutation).where(Permutation.permutation_name == perm["permutation_name"])).first()
+            if existing_perm:
+                logger.warning(f"Skipping duplicate permutation: {perm['permutation_name']}")
+                continue  # Skip adding duplicate
 
-        # Run DNSTwist and insert permutations
-        permutations = run_dnstwist(domain_name)
-        if permutations:
-            insert_permutations(domain_name, permutations)
+            new_perm = Permutation(
+                permutation_name=perm["permutation_name"],
+                domain_name=domain_name,
+                server=perm.get("server"),
+                mail_server=perm.get("mail_server"),
+                risk=perm.get("risk"),
+                ip_address=perm.get("ip_address")
+            )
+            session.add(new_perm)
 
-        return jsonify({"message": "Domain added successfully", "domain": domain_name}), 201
+        session.commit()
 
-    except Exception as e:
-        logger.error(f"Error adding domain: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    if DEBUG:
+        logger.debug("Successfully inserted new permutations into database.")
 
-# Helper functions for DNSTwist
-def run_dnstwist(domain_name):
-    """Runs DNSTwist on the domain and returns the results."""
-    try:
-        # Run DNSTwist
-        results = dnstwist.run(domain_name)
-        return results
-    except Exception as e:
-        logger.error(f"Error running DNSTwist: {str(e)}")
-        return None
+    return jsonify({"message": "Permutations successfully added (duplicates skipped)"}), 201
 
-def insert_permutations(domain_name, permutations):
-    """Inserts DNSTwist results into the Permutation table."""
-    try:
-        with Session(engine) as session:
-            for permutation in permutations:
-                # Create a new Permutation instance
-                new_permutation = Permutation(
-                    permutation_name=permutation["domain-name"],
-                    domain_name=domain_name,
-                    ip_address=permutation.get("ip-address"),
-                    server=permutation.get("http-server"),
-                    mail_server=permutation.get("mail-server"),
-                    risk=permutation.get("risk", False)  # Default to False if not provided
-                )
-                # Add to the database
-                session.add(new_permutation)
-            session.commit()
-
-        if DEBUG:
-            logger.debug(f"Inserted {len(permutations)} permutations for domain: {domain_name}")
-
-    except Exception as e:
-        logger.error(f"Error inserting permutations: {str(e)}")
-        raise
-
-#  Startup Sequence
+# Startup Sequence
 if __name__ == '__main__':
     time.sleep(5)  # Allow database & services to start
     create_db_and_tables()  # Initialize database
