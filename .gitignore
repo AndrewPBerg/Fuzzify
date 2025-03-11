@@ -25,6 +25,10 @@ build/
 .env.production.local
 .env*.local
 .vercel
+venv/
+.venv/
+myenv/
+.myenv/
 
 # Dependencies
 npm-debug.log*
