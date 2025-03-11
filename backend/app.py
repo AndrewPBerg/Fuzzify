@@ -1,3 +1,5 @@
+import subprocess
+import json
 from flask import Flask, jsonify, request
 from sqlmodel import SQLModel, create_engine, Session, select
 from flask_cors import CORS
@@ -154,6 +156,8 @@ def start_subscriber():
     thread.start()
 
 '''#  Setup Google Cloud Pub/Sub Client
+
+#  Google Cloud Pub/Sub Integration
 PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
 publisher = pubsub_v1.PublisherClient()
 topic_path = f"projects/test-project/topics/test-topic"
@@ -175,70 +179,81 @@ def test_pubsub():
         logger.error(f"Pub/Sub error: {str(e)}")
         return jsonify({"error": str(e)})'''
 
-@app.route('/api/permutations', methods=['POST'])
-def add_permutations():
-    """API endpoint to insert permutations, ensuring domain exists and duplicates are prevented."""
+#  API for Handling Permutations Using dnstwist
+@app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST'])
+def add_permutations(user_id, domain_name):
+    """Generates permutations using dnstwist and stores them in MySQL."""
     if DEBUG:
-        logger.debug("Received request to add permutations.")
+        logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
 
-    data = request.json  # Get JSON from the request
-    if DEBUG:
-        logger.debug(f"Data received: {data}")
-
-    # Check required fields
-    if not data or 'domain_name' not in data or 'permutations' not in data:
-        logger.error("Missing 'domain_name' or 'permutations' in request.")
-        return jsonify({"error": "domain_name and permutations fields are required"}), 400
-
-    domain_name = data['domain_name']
-    permutations_data = data['permutations']
-
+    # Validate user exists
     with Session(engine) as session:
-        #  Check if domain exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "Invalid user_id. User does not exist."}), 400
+
+    # Run dnstwist to generate permutations
+    try:
+        dnstwist_cmd = ["dnstwist", "--json", domain_name]
+        result = subprocess.run(dnstwist_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.error(f"dnstwist execution failed: {result.stderr}")
+            return jsonify({"error": "dnstwist execution failed"}), 500
+
+        # Parse dnstwist output
+        permutations_data = json.loads(result.stdout)
+        if DEBUG:
+            logger.debug(f"dnstwist results: {permutations_data}")
+
+    except Exception as e:
+        logger.error(f"Error running dnstwist: {e}")
+        return jsonify({"error": "Failed to execute dnstwist"}), 500
+
+    # Insert domain and permutations into MySQL
+    with Session(engine) as session:
+        # Check if domain exists
         domain = session.exec(select(Domain).where(Domain.domain_name == domain_name)).first()
 
-        #  If domain doesn't exist create it
         if not domain:
-            new_domain = Domain(domain_name=domain_name, user_id="auto_user", total_scans=0)
+            new_domain = Domain(domain_name=domain_name, user_id=user_id, total_scans=0)
             session.add(new_domain)
             session.commit()
-            session.refresh(new_domain)  # Ensure it's saved
+            session.refresh(new_domain)
 
-        #  Insert permutations if they don't already exist
+        # Insert permutations if they don't already exist
         for perm in permutations_data:
-            existing_perm = session.exec(select(Permutation).where(Permutation.permutation_name == perm["permutation_name"])).first()
+            existing_perm = session.exec(
+                select(Permutation).where(Permutation.permutation_name == perm["domain"])
+            ).first()
+            
             if existing_perm:
-                logger.warning(f"Skipping duplicate permutation: {perm['permutation_name']}")
-                continue  # Skip adding duplicate
-
+                logger.warning(f"Skipping duplicate permutation: {perm['domain']}")
+                continue  # Skip duplicates
+            
             new_perm = Permutation(
-                permutation_name=perm["permutation_name"],
+                permutation_name=perm["domain"],
                 domain_name=domain_name,
-                server=perm.get("server"),
-                mail_server=perm.get("mail_server"),
-                risk=perm.get("risk"),
-                ip_address=perm.get("ip_address")
+                server=perm.get("dns_a", [""])[0] if "dns_a" in perm else None,
+                mail_server=perm.get("dns_mx", [""])[0] if "dns_mx" in perm else None,
+                risk=perm.get("fuzzer") == "homoglyph",
+                ip_address=perm.get("dns_a", [""])[0] if "dns_a" in perm else None
             )
             session.add(new_perm)
 
         session.commit()
 
     if DEBUG:
-        logger.debug("Successfully inserted new permutations into database.")
+        logger.debug("Successfully inserted permutations into database.")
 
-    return jsonify({"message": "Permutations successfully added (duplicates skipped)"}), 201
+    return jsonify({"message": "Permutations generated and added to database"}), 201
 
-@app.route('/api/permutations', methods=['GET'])
-def get_permutations():
+# GET Endpoint to Fetch Permutations
+@app.route('/api/<user_id>/<domain_name>/permutations', methods=['GET'])
+def get_permutations(user_id, domain_name):
     """API endpoint to fetch stored permutations for a given domain."""
     if DEBUG:
-        logger.debug("Received request to fetch permutations.")
-
-    domain_name = request.args.get('domain_name')
-
-    if not domain_name:
-        logger.error("Missing 'domain_name' parameter in request.")
-        return jsonify({"error": "domain_name parameter is required"}), 400
+        logger.debug(f"Received request to fetch permutations for {domain_name}.")
 
     with Session(engine) as session:
         permutations = session.exec(select(Permutation).where(Permutation.domain_name == domain_name)).all()
@@ -248,6 +263,27 @@ def get_permutations():
 
     return jsonify([perm.dict() for perm in permutations])
 
+#  API for Adding Domains
+@app.route('/api/<user_id>/domain', methods=['POST'])
+def add_domain(user_id):
+    """API endpoint to add a new domain."""
+    data = request.json
+    domain_name = data.get("domain_name")
+
+    if not domain_name:
+        return jsonify({"error": "Domain name is required"}), 400
+
+    with Session(engine) as session:
+        existing_domain = session.exec(select(Domain).where(Domain.domain_name == domain_name)).first()
+        
+        if existing_domain:
+            return jsonify({"message": "Domain already exists."}), 409  # Conflict
+
+        new_domain = Domain(domain_name=domain_name, user_id=user_id, total_scans=0)
+        session.add(new_domain)
+        session.commit()
+
+    return jsonify({"message": f"Domain {domain_name} added successfully."}), 201
 
 # Startup Sequence
 if __name__ == '__main__':
