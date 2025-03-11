@@ -12,6 +12,18 @@
 - can all be implemented in `app.py` or broken up into modules like: `/api/get_requests.py`
 
 
+## create new user
+
+- `POST` to create a new user
+
+```python
+@app.route('/api/new_user', methods=['POST'])
+def get_user_id():
+    """API endpoint to POST a new user"""
+
+    if request.method == "POST"
+```
+
 ## user_id
 - all api endpoints should be dependent on the `user_id`
 
