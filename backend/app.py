@@ -9,6 +9,7 @@ from google.cloud import pubsub_v1
 import logging
 import time
 from models import User, Domain, Permutation
+import threading
 
 # Enable Debugging for Logs
 DEBUG = True
@@ -21,6 +22,7 @@ if DEBUG:
 # Load environment variables
 load_dotenv()
 
+# Initialize Flask App
 app = Flask(__name__)
 CORS(app)
 
@@ -65,6 +67,95 @@ def db_test():
     except Exception as e:
         logger.error(f"Database error: {str(e)}")
         return jsonify({"error": str(e)})
+    
+#  Setup Google Cloud Pub/Sub Client
+
+# Load Environment Variables
+os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "our-project")
+
+# Pub/Sub Clients
+publisher = pubsub_v1.PublisherClient()
+subscriber = pubsub_v1.SubscriberClient()
+
+# Topic and Subscription Names
+project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+topic_name = "frontend-to-backend"
+subscription_name = "backend-sub"
+
+# Topic & Subscription Paths
+topic_path = publisher.topic_path(project_id, topic_name)
+subscription_path = subscriber.subscription_path(project_id, subscription_name)
+
+# Ensure Topic Exists
+def ensure_topic():
+    """Ensure Pub/Sub topic exists."""
+    try:
+        topics = [t.name for t in publisher.list_topics(request={"project": f"projects/{project_id}"})]
+        if topic_path not in topics:
+            publisher.create_topic(request={"name": topic_path})
+            logger.info(f"✅ Topic {topic_name} created.")
+        else:
+            logger.info(f"⚠️ Topic {topic_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating topic: {e}")
+
+# Ensure Subscription Exists
+def ensure_subscription():
+    """Ensure Pub/Sub subscription exists."""
+    try:
+        subscriptions = [s.name for s in subscriber.list_subscriptions(request={"project": f"projects/{project_id}"})]
+        if subscription_path not in subscriptions:
+            subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
+            logger.info(f"✅ Subscription {subscription_name} created.")
+        else:
+            logger.info(f"⚠️ Subscription {subscription_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating subscription: {e}")
+
+@app.route('/publish-message', methods=['POST'])
+def publish_message():
+    """Publishes a message from frontend to backend via Pub/Sub."""
+    data = request.json
+    if not data or "message" not in data:
+        return jsonify({"error": "Message field is required"}), 400
+
+    message_data = data["message"].encode("utf-8")
+
+    try:
+        future = publisher.publish(topic_path, message_data)
+        msg_id = future.result()
+        logger.info(f"Published message: {msg_id}")
+        return jsonify({"message": "Message published", "msg_id": msg_id})
+    except Exception as e:
+        logger.error(f"Error publishing message: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def callback(message):
+    """Process received messages from Pub/Sub."""
+    try:
+        message_data = message.data.decode("utf-8")
+        logger.info(f"📩 Received message: {message_data}")
+        message.ack()
+    except Exception as e:
+        logger.error(f" Error processing message: {e}")
+
+def start_subscriber():
+    """Start Pub/Sub subscriber in a background thread."""
+    def run():
+        while True:
+            try:
+                streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+                logger.info("🔄 Listening for messages on subscription...")
+                streaming_pull_future.result()
+            except Exception as e:
+                logger.error(f"Subscriber error: {e}")
+                time.sleep(5)  # Retry after a short delay
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+
+'''#  Setup Google Cloud Pub/Sub Client
 
 #  Google Cloud Pub/Sub Integration
 PUBSUB_EMULATOR_HOST = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
@@ -86,7 +177,7 @@ def test_pubsub():
         return jsonify({"message": "Published to Pub/Sub", "msg_id": msg_id})
     except Exception as e:
         logger.error(f"Pub/Sub error: {str(e)}")
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)})'''
 
 #  API for Handling Permutations Using dnstwist
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST'])
@@ -198,4 +289,7 @@ def add_domain(user_id):
 if __name__ == '__main__':
     time.sleep(5)  # Allow database & services to start
     create_db_and_tables()  # Initialize database
+    ensure_topic()  # Ensure Pub/Sub topic exists
+    ensure_subscription()  # Ensure Pub/Sub subscription exists
+    start_subscriber()  # Start message subscriber
     app.run(host='0.0.0.0', port=8000, debug=True)  # Ensure it matches Docker Compose port mapping
