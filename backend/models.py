@@ -1,11 +1,12 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
+from uuid import uuid4
 
-#  User Table
+
 class User(SQLModel, table=True):
-    user_id: str = Field(primary_key=True)
-    domain_name: str = Field(foreign_key="domain.domain_name")  # Foreign key to Domain
+    user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    domain_name: str = Field(foreign_key="domain.domain_name")
 
 #  Domain Table
 class Domain(SQLModel, table=True):
