@@ -27,11 +27,16 @@ export function ThemeToggle({ className }: { className?: string }) {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  // Avoid hydration mismatch
+  // Avoid hydration mismatch and handle immediate rendering of correct theme
   useEffect(() => {
-    setMounted(true);
+    // Wait a brief moment to ensure all theme logic has settled
+    const timeout = setTimeout(() => {
+      setMounted(true);
+    }, 10);
+    return () => clearTimeout(timeout);
   }, []);
 
+  // Return a non-interactive placeholder with the same dimensions to prevent layout shift
   if (!mounted) {
     return <div className={cn("w-9 h-9", className)} />;
   }

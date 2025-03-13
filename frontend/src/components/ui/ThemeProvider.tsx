@@ -44,29 +44,32 @@ export function ThemeProvider({
     if (!mounted) return;
     
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-
+    
+    // Only modify classes if the theme has changed from what's already applied
+    // This helps prevent unnecessary flashes
+    const isDark = root.classList.contains('dark');
+    const currentTheme = isDark ? 'dark' : 'light';
+    
+    let newTheme = theme;
+    
+    // Determine the actual theme if set to system
     if (theme === "system") {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      
-      const applySystemTheme = (isDark: boolean) => {
-        const systemTheme = isDark ? "dark" : "light";
-        root.classList.add(systemTheme);
-      };
-      
-      // Apply initial system theme
-      applySystemTheme(mediaQuery.matches);
+      newTheme = mediaQuery.matches ? "dark" : "light";
       
       // Listen for system theme changes
       const handleChange = (e: MediaQueryListEvent) => {
         root.classList.remove("light", "dark");
-        applySystemTheme(e.matches);
+        root.classList.add(e.matches ? "dark" : "light");
       };
       
       mediaQuery.addEventListener("change", handleChange);
-      
       return () => mediaQuery.removeEventListener("change", handleChange);
-    } else {
+    }
+    
+    // Only update classes if the theme is actually changing
+    if (newTheme !== currentTheme) {
+      root.classList.remove("light", "dark");
       root.classList.add(theme);
     }
   }, [theme, mounted]);

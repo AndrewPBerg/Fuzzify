@@ -187,15 +187,16 @@ export function Sidebar() {
   const { theme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [useHorizontalSidebar, setUseHorizontalSidebar] = useState(false);
-  const [lockPosition, setLockPosition] = useState<LockPosition>(LockPosition.None);
+  const [lockPosition, setLockPosition] = useState<LockPosition>(LockPosition.Left);
   const [isSnapping, setIsSnapping] = useState(false);
   const [position, setPosition] = useState<Position>(() => {
-    // Initialize position from localStorage or default
+    // Initialize position from localStorage or default to left edge
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sidebarPosition");
-      return saved ? JSON.parse(saved) : { x: 5, y: 5 };
+      // Default to left edge (x: 0) instead of x: 5
+      return saved ? JSON.parse(saved) : { x: 0, y: 5 };
     }
-    return { x: 5, y: 5 };
+    return { x: 0, y: 5 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -229,6 +230,28 @@ export function Sidebar() {
       };
     }
   }, [isMobile]);
+
+  // Apply initial content padding for default left-locked sidebar
+  useEffect(() => {
+    // Skip if using horizontal sidebar or if sidebar is not left-locked
+    if (useHorizontalSidebar || lockPosition !== LockPosition.Left) {
+      return;
+    }
+
+    // Need to wait for the sidebar ref to be available
+    const applyInitialPadding = () => {
+      if (sidebarRef.current) {
+        const sidebarWidth = sidebarRef.current.offsetWidth;
+        // Dispatch content padding change event
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: Math.max(sidebarWidth - 16, 0), right: 0 } 
+        }));
+      }
+    };
+
+    // Apply the padding on the next tick to ensure the sidebar has rendered
+    setTimeout(applyInitialPadding, 0);
+  }, [useHorizontalSidebar, lockPosition, sidebarRef.current]);
 
   // Reset body padding when component unmounts or when using horizontal sidebar
   useEffect(() => {
@@ -506,7 +529,9 @@ export function Sidebar() {
             "handle cursor-grab active:cursor-grabbing",
             "rounded-xl bg-muted/50 hover:bg-muted px-2 py-1.5",
             "transition-colors duration-200",
-            "flex items-center justify-center"
+            "flex items-center justify-center",
+            // Make drag handle less prominent when sidebar is locked to edges
+            lockPosition !== LockPosition.None && "opacity-80 hover:opacity-100"
           )}
         >
           <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
