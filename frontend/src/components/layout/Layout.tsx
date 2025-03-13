@@ -65,9 +65,8 @@ export function Layout({ children }: LayoutProps) {
       
       // Apply the padding directly to the main element for immediate effect
       if (mainRef.current) {
-        // mainRef.current.style.paddingLeft = `${(event.detail.left || 0)}px`;
-        mainRef.current.style.paddingLeft = event.detail.left ? `${event.detail.left}px` : '';
-        mainRef.current.style.paddingRight = event.detail.right ? `${event.detail.right}px` : '';
+        mainRef.current.style.paddingLeft = event.detail.left ? `${Math.max(event.detail.left - 64, 0)}px` : '';
+        mainRef.current.style.paddingRight = event.detail.right ? `${Math.max(event.detail.right - 64, 0)}px` : '';
       }
     };
 
@@ -96,16 +95,14 @@ export function Layout({ children }: LayoutProps) {
         className={cn(
           "min-h-screen transition-all duration-300",
           sidebarMode === SidebarMode.Horizontal && "ml-0",
-          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-4 md:px-6 lg:px-8"
+          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-2 md:px-4 lg:px-6"
         )}
         style={{ 
-          // paddingLeft: `${(contentPadding.left || 0) + 16}px`,
-          paddingLeft: contentPadding.left ? `${contentPadding.left}px` : undefined,
-          paddingRight: contentPadding.right ? `${contentPadding.right}px` : undefined,
-          marginLeft: (sidebarMode === SidebarMode.Horizontal || contentPadding.left) ? 0 : isMobile ? 0 : sidebarWidth,
+          paddingLeft: contentPadding.left ? `${Math.max(contentPadding.left - 16, 0)}px` : undefined,
+          paddingRight: contentPadding.right ? `${Math.max(contentPadding.right - 16, 0)}px` : undefined,
           maxWidth: contentPadding.left || contentPadding.right ? "100%" : "1600px",
           width: "100%",
-          transition: "padding 0.3s ease-out, margin 0.3s ease-out"
+          transition: "padding 0.4s ease-out, margin 0.4s ease-out"
         }}
       >
         {children}

@@ -144,7 +144,7 @@ const NavigationItems = memo(({ pathname, isCollapsed }: { pathname: string, isC
   if (isCollapsed) return null;
   
   return (
-    <div className="flex flex-col gap-1.5 py-1">
+    <div className="flex flex-col gap-1.5">
       {navigation.map((item) => {
         const isActive = pathname === item.href;
         return (
@@ -273,21 +273,21 @@ export function Sidebar() {
       if (lockPosition === LockPosition.Left) {
         // Dispatch event for components that listen to it
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-          detail: { left: sidebarWidth, right: 0 } 
+          detail: { left: Math.max(sidebarWidth - 16, 0), right: 0 } 
         }));
         
         // Also apply directly to body for immediate effect
-        document.body.style.paddingLeft = `${sidebarWidth}px`;
+        document.body.style.paddingLeft = `${Math.max(sidebarWidth - 16, 0)}px`;
         document.body.style.paddingRight = '0px';
       } else if (lockPosition === LockPosition.Right) {
         // Dispatch event for components that listen to it
         window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-          detail: { left: 0, right: sidebarWidth } 
+          detail: { left: 0, right: Math.max(sidebarWidth - 16, 0) } 
         }));
         
         // Also apply directly to body for immediate effect
         document.body.style.paddingLeft = '0px';
-        document.body.style.paddingRight = `${sidebarWidth}px`;
+        document.body.style.paddingRight = `${Math.max(sidebarWidth - 16, 0)}px`;
       }
     }
   }, [lockPosition, position.x, useHorizontalSidebar]);
@@ -312,7 +312,7 @@ export function Sidebar() {
           // Update content padding immediately for a smooth transition
           // Left padding = sidebar width, right padding = 0 for asymmetric padding
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: sidebarWidth, right: 0 } 
+            detail: { left: Math.max(sidebarWidth - 16, 0), right: 0 } 
           }));
         }, 0);
         
@@ -333,12 +333,12 @@ export function Sidebar() {
           // Update content padding immediately for a smooth transition
           // Left padding = 0, right padding = sidebar width for asymmetric padding
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: 0, right: sidebarWidth } 
+            detail: { left: 0, right: Math.max(sidebarWidth - 16, 0) } 
           }));
           
           // Also apply directly to body for immediate effect
           document.body.style.paddingLeft = '0px';
-          document.body.style.paddingRight = `${sidebarWidth}px`;
+          document.body.style.paddingRight = `${Math.max(sidebarWidth - 16, 0)}px`;
         }, 0);
         
         return true;
@@ -418,7 +418,7 @@ export function Sidebar() {
           // For left-locked sidebar, add the exact position for a flush fit
           // Maintain asymmetric padding with right side = 0
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: sidebarWidth + newPosition.x, right: 0 } 
+            detail: { left: Math.max(sidebarWidth + newPosition.x - 16, 0), right: 0 } 
           }));
         } else if (lockPosition === LockPosition.Right) {
           const windowWidth = window.innerWidth;
@@ -426,12 +426,12 @@ export function Sidebar() {
           // For right-locked sidebar, add the exact position for a flush fit
           // Maintain asymmetric padding with left side = 0
           window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
-            detail: { left: 0, right: sidebarWidth + rightSpace } 
+            detail: { left: 0, right: Math.max(sidebarWidth + rightSpace - 16, 0) } 
           }));
           
           // Apply the padding directly to ensure it takes effect immediately
           if (typeof document !== "undefined") {
-            document.documentElement.style.setProperty('--right-padding', `${sidebarWidth + rightSpace}px`);
+            document.documentElement.style.setProperty('--right-padding', `${Math.max(sidebarWidth + rightSpace - 16, 0)}px`);
           }
         }
       }
