@@ -18,10 +18,7 @@ class Domain(SQLModel, table=True):
     server: Optional[str] = Field(default=None)  # Web server info
     mail_server: Optional[str] = Field(default=None)  # Mail server info
 
-# Association Table for Many-to-Many Relationship
-class UserDomain(SQLModel, table=True):
-    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
-    domain_name: str = Field(foreign_key="domain.domain_name", primary_key=True)
+
 
 #  Permutation Table (DNS Twist Results)
 class Permutation(SQLModel, table=True):
