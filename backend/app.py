@@ -14,6 +14,8 @@ from uuid import uuid4
 
 # Enable Debugging for Logs
 DEBUG = True
+DROP_TABLES = False 
+
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -165,7 +167,7 @@ def describe_user_table():
         with Session(engine) as session:  # Use Session from sqlmodel
             result = session.exec(text("SHOW COLUMNS FROM user"))  # Execute the raw SQL command
             columns = [{"Field": row[0], "Type": row[1], "Null": row[2], "Key": row[3], "Default": row[4], "Extra": row[5]} for row in result]
-        
+            # TODO: Add all domains schema to the response
         return jsonify(columns), 200
         
     except Exception as e:
@@ -245,7 +247,25 @@ def handle_permutations(user_name, domain_name):
                 return jsonify({"error": "Invalid user_name. User does not exist."}), 400
 
             # Assuming permutations are generated here (code omitted for brevity)
+            # THIS IS WHERE DNSTWIST IS CALLED!!!
             generated_permutations = []  # Replace with actual permutation generation logic
+            # Sample JSON POST request for adding permutations:
+ 
+            """
+            sample JSON POST request:
+            {
+                "domain_name": "root.com",
+                "permutation_name": "groot.com",
+            
+                "optional_features": {
+                "server": "example.com",
+                "mail_server": "mail.example.com",
+                "risk": true,
+                "ip_address": "192.168.1.1"
+                }
+                
+            }
+            """
 
             for perm_name in generated_permutations:
                 # Extract optional features from the request
@@ -277,10 +297,12 @@ def handle_permutations(user_name, domain_name):
 
 if __name__ == '__main__':
     time.sleep(1)
-    try:
-        drop_all_tables()  # Drop all tables to recreate schema
-    except Exception as e:
-        logger.error(f"Error dropping tables: {e}")
+    # Drop all tables to recreate schema
+    if DROP_TABLES:
+        try:
+            drop_all_tables()  # Drop all tables to recreate schema
+        except Exception as e:
+            logger.error(f"Error dropping tables: {e}")
     
     create_db_and_tables()
     # ensure_topic()
