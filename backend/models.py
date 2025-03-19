@@ -3,10 +3,11 @@ from typing import Optional
 from datetime import datetime
 from uuid import uuid4
 
-
 class User(SQLModel, table=True):
+    __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    domain_name: str = Field(foreign_key="domain.domain_name")
+    username: Optional[str] = Field(default=None) # user name 
+   
 
 #  Domain Table
 class Domain(SQLModel, table=True):
@@ -18,10 +19,6 @@ class Domain(SQLModel, table=True):
     server: Optional[str] = Field(default=None)  # Web server info
     mail_server: Optional[str] = Field(default=None)  # Mail server info
 
-# Association Table for Many-to-Many Relationship
-class UserDomain(SQLModel, table=True):
-    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
-    domain_name: str = Field(foreign_key="domain.domain_name", primary_key=True)
 
 #  Permutation Table (DNS Twist Results)
 class Permutation(SQLModel, table=True):

@@ -28,7 +28,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Database Connection
-DATABASE_URL = os.getenv("DB_URL", "mysql://user:password@db:3306/mydatabase")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password0@db:3306/dnstwist-db")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
@@ -133,30 +133,25 @@ def start_subscriber():
 
 # ------------------------- API Endpoints -------------------------
 
+@app.route("/")
+def health_check():
+    return "OK", 200
+
 @app.route('/api/user', methods=['POST'])
 def create_user():
     """API endpoint to create a new user and return the user_id."""
-    if DEBUG:
-        logger.debug("Received request to create a new user.")
+    try:
+        with Session(engine) as session:
+            # Create a new user
+            new_user = User()
+            session.add(new_user)
+            session.commit()
+            session.refresh(new_user)
 
-    data = request.json
-    domain_name = data.get("domain_name")
+        return jsonify({"message": "User created successfully", "user_id": new_user.user_id}), 201
 
-    if not domain_name:
-        return jsonify({"error": "Missing required field 'domain_name'"}), 400
-
-    with Session(engine) as session:
-        existing_user = session.exec(select(User).where(User.domain_name == domain_name)).first()
-        
-        if existing_user:
-            return jsonify({"message": "User already exists", "user_id": existing_user.user_id}), 200
-        
-        new_user = User(user_id=str(uuid4()), domain_name=domain_name)
-        session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-
-    return jsonify({"message": "User created successfully", "user_id": new_user.user_id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/<user_id>/domain', methods=['POST'])
 def add_domain(user_id):
@@ -189,14 +184,22 @@ def add_permutations(user_id, domain_name):
     if DEBUG:
         logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
 
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.user_id == user_id)).first()
-        if not user:
-            return jsonify({"error": "Invalid user_id. User does not exist."}), 400
+    """Run dnstwist command"""
+    try:
+        result = subprocess.run(["dnstwist", "--json", domain_name], capture_output=True, text=True)
+        permutations_data = json.loads(result.stdout)
 
-    # Insert permutations (code omitted for brevity)
+        with Session(engine) as session:
+            for entry in permutations_data:
+                perm = Permutation(domain_name=domain_name, permuted_domain=entry["domain"])
+                session.add(perm)
+            session.commit()
+        
+        return jsonify({"message": "Permutations generated and stored!"}), 201
 
-    return jsonify({"message": "Permutations generated and added to database"}), 201
+    except Exception as e:
+        logger.error(f"Error running dnstwist: {e}")
+        return jsonify({"error": "Failed to generate permutations"}), 500
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['GET'])
 def get_permutations(user_id, domain_name):
@@ -210,14 +213,14 @@ def get_permutations(user_id, domain_name):
     if not permutations:
         return jsonify({"message": "No permutations found for this domain."}), 404
 
-    return jsonify([perm.dict() for perm in permutations])
+    return jsonify([{"id": p.id, "domain_name": p.domain_name, "permuted_domain": p.permuted_domain} for p in permutations])
 
 # ------------------------- Startup Sequence -------------------------
 
 if __name__ == '__main__':
     time.sleep(5)
     create_db_and_tables()
-    ensure_topic()
-    ensure_subscription()
-    start_subscriber()
+    #ensure_topic()
+    #ensure_subscription()
+    #start_subscriber()
     app.run(host='0.0.0.0', port=8000, debug=True)
