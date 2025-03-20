@@ -116,18 +116,11 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
             <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <span>Organization Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <span>Team</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
-                <span>Logout</span>
+
+              <DropdownMenuItem asChild className="text-destructive">
+                <Link href="/login">
+                  <span>Logout</span>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -550,20 +543,14 @@ export function Sidebar() {
             side={lockPosition === LockPosition.Right ? "left" : "right"} 
             className="w-56 mt-1"
           >
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>My Account</DropdownMenuLabel> 
+            {/* TODO: Change `My Account` to current user's name */}
+            {/* TODO: also need todo for horizontal sidebar */}
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <span>Organization Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <span>Team</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              <span>Logout</span>
+            <DropdownMenuItem asChild className="text-destructive">
+              <Link href="/login">
+                <span>Logout</span>
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

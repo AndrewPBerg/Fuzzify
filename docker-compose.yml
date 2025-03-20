@@ -7,18 +7,19 @@ services:
       - "10001:8000"  # Ensure backend listens on correct port
     volumes:
       - ./backend:/app
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     depends_on:
       db:
         condition: service_healthy
       pubsub:
         condition: service_started
     environment:
-      DB_URL: "mysql+mysqlconnector://user:password@db:3306/mydatabase"
+      DB_URL: "mysql+mysqlconnector://user:password@db:3306/dnstwist_db"
       PUBSUB_EMULATOR_HOST: "pubsub:8085"
       PUBSUB_PROJECT_ID: "local-project"
       PYTHONUNBUFFERED: 1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api"]
       interval: 30s  # Increased interval to give more time for startup
       timeout: 10s   # Increased timeout
       retries: 5     # Increased retries
@@ -29,7 +30,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "10002:3000"
+      - "10002:10002"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -44,11 +45,14 @@ services:
   db:
     image: mysql:8.0  # Ensure MySQL is version 8.0
     command: --port=3306
+  # Expose MySQL port 3306
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mydatabase
+      MYSQL_DATABASE: dnstwist_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306" 
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:

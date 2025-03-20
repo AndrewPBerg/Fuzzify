@@ -1,25 +1,50 @@
-# Use Node.js as the base image
-FROM node:18-alpine
-
-# Set the working directory inside the container
+###############################
+# Stage 1: Common Base
+###############################
+FROM node:18-alpine AS base
 WORKDIR /app
-
-# Copy package.json and package-lock.json first (for caching)
+# Copy only dependency files first for caching
 COPY package.json package-lock.json ./
-
-# Install ALL dependencies including dev dependencies
+# Install ALL dependencies (including dev dependencies)
 RUN npm install
-
-
-# Copy the rest of the application files
+# Install Tailwind CSS and its dependencies
+RUN npm install -D tailwindcss@latest postcss@latest autoprefixer@latest
+# Copy the rest of your code
 COPY . .
+# Initialize Tailwind CSS after copying the code
+RUN ./node_modules/.bin/tailwindcss init -p
 
-# # Build the Next.js application
-# RUN npm run build
+###############################
+# Stage 2: Production Build
+###############################
+FROM base AS builder
+ENV NODE_ENV=production
+# Run the build step (only needed for production)
+RUN npm run build
 
-
-# Expose port 3000 (default for Next.js)
+###############################
+# Stage 3: Production Runtime
+###############################
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+# Copy necessary files from the builder stage
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/postcss.config.js ./
+COPY --from=builder /app/tailwind.config.js ./
+# Install only production dependencies
+RUN npm ci --omit=dev
 EXPOSE 3000
+CMD ["npm", "start"]
 
-# Start the Next.js application
+###############################
+# Stage 4: Development Target
+###############################
+FROM base AS dev
+ENV NODE_ENV=development
+# In development, we want live reloading so we skip the build step.
+EXPOSE 10002
 CMD ["npm", "run", "dev"]
