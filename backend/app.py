@@ -148,6 +148,10 @@ def drop_all_tables():
 
 # ------------------------- API Endpoints -------------------------
 
+
+@app.route("/")
+def health():
+    return "OK", 200
 # Health check endpoint
 @app.route('/api', methods=['HEAD', 'GET'])
 def health_check():
