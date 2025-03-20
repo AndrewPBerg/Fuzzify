@@ -45,8 +45,7 @@ services:
   db:
     image: mysql:8.0  # Ensure MySQL is version 8.0
     command: --port=3306
-    ports:
-      - "3306:3306"  # Expose MySQL port 3306
+  # Expose MySQL port 3306
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: dnstwist_db
