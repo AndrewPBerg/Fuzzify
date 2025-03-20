@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime
 from uuid import uuid4
 
-
 class User(SQLModel, table=True):
     user_name: str = Field(primary_key=True)
     # domain_name: Optional[str] = Field(default=None, foreign_key="domain.domain_name")  # Removed as it's linked elsewhere

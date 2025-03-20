@@ -30,7 +30,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Database Connection
-DATABASE_URL = os.getenv("DB_URL", "mysql://user:password@db:3306/mydatabase")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password0@db:3306/dnstwist-db")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
