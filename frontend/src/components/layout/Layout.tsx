@@ -3,6 +3,7 @@
 import { Sidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,10 @@ export function Layout({ children }: LayoutProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>(SidebarMode.Floating);
   const [contentPadding, setContentPadding] = useState({ left: 0, right: 0 });
+  const pathname = usePathname();
+  
+  // Check if current path is the login page
+  const isLoginPage = pathname === "/login";
 
   const mainRef = useRef<HTMLElement>(null);
 
@@ -89,18 +94,19 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
+      {!isLoginPage && <Sidebar />}
       <main 
         ref={mainRef}
         className={cn(
           "min-h-screen transition-all duration-300",
           sidebarMode === SidebarMode.Horizontal && "ml-0",
-          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-2 md:px-4 lg:px-6"
+          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-2 md:px-4 lg:px-6",
+          isLoginPage && "container mx-auto px-2 md:px-4 lg:px-6" // Always use container for login page
         )}
         style={{ 
-          paddingLeft: contentPadding.left ? `${Math.max(contentPadding.left - 16, 0)}px` : undefined,
-          paddingRight: contentPadding.right ? `${Math.max(contentPadding.right - 16, 0)}px` : undefined,
-          maxWidth: contentPadding.left || contentPadding.right ? "100%" : "1600px",
+          paddingLeft: isLoginPage ? undefined : (contentPadding.left ? `${Math.max(contentPadding.left - 16, 0)}px` : undefined),
+          paddingRight: isLoginPage ? undefined : (contentPadding.right ? `${Math.max(contentPadding.right - 16, 0)}px` : undefined),
+          maxWidth: isLoginPage ? "1600px" : (contentPadding.left || contentPadding.right ? "100%" : "1600px"),
           width: "100%",
           transition: "padding 0.4s ease-out, margin 0.4s ease-out"
         }}
