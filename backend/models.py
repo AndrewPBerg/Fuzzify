@@ -4,19 +4,20 @@ from datetime import datetime
 from uuid import uuid4
 
 class User(SQLModel, table=True):
-    user_name: str = Field(primary_key=True)
-    # domain_name: Optional[str] = Field(default=None, foreign_key="domain.domain_name")  # Removed as it's linked elsewhere
+    __tablename__ = "user"
+    user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    username: Optional[str] = Field(default=None) # user name 
+   
 
 #  Domain Table
 class Domain(SQLModel, table=True):
     domain_name: str = Field(primary_key=True)
-    user_name: str = Field(foreign_key="user.user_name")  # Links to user
+    user_id: str = Field(foreign_key="user.user_id")  # Links to user
     last_scan: Optional[datetime] = Field(default=None)  # Timestamp of last scan
     total_scans: int = Field(default=0)  # Number of times scanned
     ip_address: Optional[str] = Field(default=None)  # Resolved IP
     server: Optional[str] = Field(default=None)  # Web server info
     mail_server: Optional[str] = Field(default=None)  # Mail server info
-
 
 
 #  Permutation Table (DNS Twist Results)
