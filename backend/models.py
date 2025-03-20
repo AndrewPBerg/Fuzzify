@@ -6,6 +6,7 @@ from uuid import uuid4
 class User(SQLModel, table=True):
     __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    username: Optional[str] = Field(default=None) # user name 
    
 
 #  Domain Table
