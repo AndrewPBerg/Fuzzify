@@ -6,12 +6,12 @@ import {
   Globe, 
   Settings,
   Clock,
-  User,
   ChevronsLeft,
   ChevronsRight,
   GripHorizontal
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserNav } from "./UserNav";
 import { cn } from "@/lib/utils";
 import { 
   DropdownMenu,
@@ -106,24 +106,7 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
 
         <div className="flex items-center gap-2 shrink-0 ml-2">
           <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted">
-                <User className="h-4.5 w-4.5 text-muted-foreground" />
-                <span className="sr-only">Account menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem asChild className="text-destructive">
-                <Link href="/login">
-                  <span>Logout</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserNav />
         </div>
       </div>
     </>
@@ -529,50 +512,16 @@ export function Sidebar() {
         >
           <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
         </div>
-
-        {/* Account dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted cursor-pointer">
-              <User className="h-4.5 w-4.5 text-muted-foreground" />
-              <span className="sr-only">Account menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align={lockPosition === LockPosition.Right ? "end" : "start"} 
-            side={lockPosition === LockPosition.Right ? "left" : "right"} 
-            className="w-56 mt-1"
-          >
-            <DropdownMenuLabel>My Account</DropdownMenuLabel> 
-            {/* TODO: Change `My Account` to current user's name */}
-            {/* TODO: also need todo for horizontal sidebar */}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="text-destructive">
-              <Link href="/login">
-                <span>Logout</span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
+        <div className="flex justify-center mt-4 mb-4">
+          <UserNav />
+        </div>
 
         <NavigationItems pathname={pathname} isCollapsed={isCollapsed} />
-
-        {/* Theme toggle */}
-        {!isCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent 
-              side={lockPosition === LockPosition.Right ? "left" : "right"} 
-              sideOffset={8}
-            >
-              <span>Toggle Theme</span>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        
+        <div className="mt-auto flex justify-center">
+          <ThemeToggle className="p-2.5 h-9 w-9 mb-4 rounded-full bg-muted/50 hover:bg-muted" />
+        </div>
 
         {/* Collapse toggle button */}
         <Tooltip>

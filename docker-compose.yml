@@ -44,8 +44,7 @@ services:
 
   db:
     image: mysql:8.0  # Ensure MySQL is version 8.0
-    command: --port=3306
-  # Expose MySQL port 3306
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: dnstwist_db
@@ -55,6 +54,7 @@ services:
       - "3307:3306" 
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "3306", "-u", "root", "-proot"]
       interval: 10s

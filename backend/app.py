@@ -23,14 +23,14 @@ if DEBUG:
     logger.debug("Starting application in DEBUG mode")
 
 # Load environment variables
-load_dotenv()
+# load_dotenv() # NOTE: this is not needed when using docker compose env variables
 
-# Initialize Flask App
+# Initialize Flask App  
 app = Flask(__name__)
 CORS(app)
 
 # Database Connection
-DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password0@db:3306/dnstwist-db")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password@db:3306/dnstwist_db")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
@@ -188,36 +188,63 @@ def test_connection():
         return jsonify({"error": str(e)}), 500
 
 # Create a new user
-@app.route('/api/user', methods=['POST'])
+@app.route('/api/user', methods=['POST', 'GET'])
 def create_user():
-    """API endpoint to create a new user and return the user_id."""
+    """API endpoint to create a new user and return the user_id or view all users."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug("Received request to view all users.")
+        
+        with Session(engine) as session:
+            users = session.exec(select(User)).all()
+            user_list = [{"user_id": user.user_id, "username": user.username} for user in users]
+            
+        return jsonify({"users": user_list}), 200
+    
+    # POST method - create a new user
     if DEBUG:
         logger.debug("Received request to create a new user.")
 
     data = request.json
-    user_name = data.get("user_name")
+    username = data.get("username")
 
-    if not user_name:
-        return jsonify({"error": "Missing required field 'user_name'"}), 400
+    if not username:
+        return jsonify({"error": "Missing required field 'username'"}), 400
 
     with Session(engine) as session:
-        existing_user = session.exec(select(User).where(User.user_name == user_name)).first()
+        existing_user = session.exec(select(User).where(User.username == username)).first()
         
         if existing_user:
-            return jsonify({"message": "User already exists", "user_name": existing_user.user_name}), 200
+            return jsonify({"message": "User already exists", "username": existing_user.username}), 200
         
-        new_user = User(user_name=user_name)
+        new_user = User(username=username)
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
 
-    return jsonify({"message": "User created successfully", "user_name": new_user.user_name}), 201
+    return jsonify({"message": "User created successfully", "username": new_user.username}), 201
 
-@app.route('/api/<user_name>/domain', methods=['POST'])
-def add_domain(user_name):
-    """API endpoint to insert a domain for a user."""
+@app.route('/api/<user_id>/domain', methods=['POST', 'GET'])
+def add_domain(user_id):
+    """API endpoint to insert a domain for a user or view all domains for a user."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to view domains for user: {user_id}")
+        
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            domains = session.exec(select(Domain).where(Domain.user_id == user_id)).all()
+            domain_list = [{"domain_name": domain.domain_name, "total_scans": domain.total_scans} for domain in domains]
+            
+        return jsonify({"domains": domain_list}), 200
+    
+    # POST method - add a new domain
     if DEBUG:
-        logger.debug(f"Received request to add domain for user: {user_name}")
+        logger.debug(f"Received request to add domain for user: {user_id}")
 
     data = request.json
     domain_name = data.get("domain_name")
@@ -226,29 +253,29 @@ def add_domain(user_name):
         return jsonify({"error": "domain_name is required"}), 400
 
     with Session(engine) as session:
-        user = session.exec(select(User).where(User.user_name == user_name)).first()
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
 
         if not user:
             return jsonify({"error": "User not found. Please create a user first."}), 404
 
-        new_domain = Domain(domain_name=domain_name, user_name=user_name, total_scans=0)
+        new_domain = Domain(domain_name=domain_name, user_id=user_id, total_scans=0)
         session.add(new_domain)
         session.commit()
         session.refresh(new_domain)
 
     return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
 
-@app.route('/api/<user_name>/<domain_name>/permutations', methods=['POST', 'GET'])
-def handle_permutations(user_name, domain_name):
+@app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
+def handle_permutations(user_id, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
     if request.method == 'POST':
         if DEBUG:
-            logger.debug(f"Received request to add permutations for user {user_name}, domain {domain_name}.")
+            logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
 
         with Session(engine) as session:
-            user = session.exec(select(User).where(User.user_name == user_name)).first()
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
             if not user:
-                return jsonify({"error": "Invalid user_name. User does not exist."}), 400
+                return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
             # Assuming permutations are generated here (code omitted for brevity)
             # THIS IS WHERE DNSTWIST IS CALLED!!!
