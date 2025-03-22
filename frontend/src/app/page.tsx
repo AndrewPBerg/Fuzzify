@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
@@ -10,10 +10,12 @@ import { useUser } from "@/contexts/UserContext";
 export default function HomePage() {
   const router = useRouter();
   const { currentUser, isLoading } = useUser();
+  const hasRedirected = useRef(false);
 
-  // Redirect to login page if not logged in
+  // Redirect to login page if not logged in, but only once
   useEffect(() => {
-    if (!isLoading && !currentUser) {
+    if (!isLoading && !currentUser && !hasRedirected.current) {
+      hasRedirected.current = true;
       router.push("/login");
     }
   }, [currentUser, isLoading, router]);

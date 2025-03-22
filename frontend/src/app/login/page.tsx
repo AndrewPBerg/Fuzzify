@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,22 @@ export default function LoginPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const hasInitialized = useRef(false);
 
-  // Fetch users on component mount
+  // Fetch users only once when component mounts and users array is empty
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      
+      // Only fetch if we don't have any users yet
+      if (users.length === 0 && !isLoading) {
+        fetchUsers();
+      }
+    }
+  }, [isLoading]); // Only depend on isLoading to avoid needless fetches
 
+  // Set the first user as selected by default once loaded
   useEffect(() => {
-    // Set the first user as selected by default once loaded
     if (users.length > 0 && !selectedUser) {
       setSelectedUser(users[0]);
     }

@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
+import { useFetchWithCache } from './useFetchWithCache';
 
 interface Domain {
   domain_name: string;
@@ -21,24 +22,37 @@ export function useDomains(): UseDomainResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { currentUser } = useUser();
+  const { fetchWithCache, invalidateCache } = useFetchWithCache<Domain[]>();
+  const hasInitiallyFetched = useRef(false);
 
-  const fetchDomains = useCallback(async () => {
+  // Initial fetch when the component mounts or when user changes
+  useEffect(() => {
+    if (currentUser && !hasInitiallyFetched.current) {
+      fetchDomains(false);
+      hasInitiallyFetched.current = true;
+    }
+  }, [currentUser]);
+
+  const fetchDomains = useCallback(async (force: boolean = false) => {
     if (!currentUser) {
       setError('No user logged in');
       return;
     }
 
-    setIsLoading(true);
+    // Don't set loading to true for cached responses
+    if (force) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      const response = await fetch(`/api/user/${currentUser.user_id}/domain`);
+      const url = `/api/user/${currentUser.user_id}/domain`;
+      const data = await fetchWithCache(
+        url,
+        undefined,
+        { cacheDuration: force ? 0 : 30000 } // Cache for 30 seconds unless force=true
+      );
       
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      
-      const data = await response.json();
       setDomains(data);
     } catch (err) {
       setError('Failed to fetch domains');
@@ -46,7 +60,7 @@ export function useDomains(): UseDomainResult {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, fetchWithCache]);
 
   const addDomain = useCallback(async (domainName: string) => {
     if (!currentUser) {
@@ -58,7 +72,8 @@ export function useDomains(): UseDomainResult {
     setError(null);
 
     try {
-      const response = await fetch(`/api/user/${currentUser.user_id}/domain`, {
+      const url = `/api/user/${currentUser.user_id}/domain`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,21 +87,24 @@ export function useDomains(): UseDomainResult {
         throw new Error(`Error: ${response.status}`);
       }
       
+      // Invalidate domains cache for this user
+      invalidateCache(url);
+      
       // Refresh domains after adding
-      await fetchDomains();
+      await fetchDomains(true);
     } catch (err) {
       setError('Failed to add domain');
       console.error('Error adding domain:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, fetchDomains]);
+  }, [currentUser, fetchDomains, invalidateCache]);
 
   return {
     domains,
     isLoading,
     error,
-    fetchDomains,
+    fetchDomains: () => fetchDomains(false),
     addDomain,
   };
 } 
