@@ -257,13 +257,23 @@ def domain_route(user_id):
 
         if not user:
             return jsonify({"error": "User not found. Please create a user first."}), 404
+        # Check if domain already exists for this user
+        existing_domain = session.exec(
+            select(Domain).where(
+                (Domain.domain_name == domain_name) & 
+                (Domain.user_id == user_id)
+            )
+        ).first()
+        
+        if existing_domain:
+            return jsonify({"message": "Domain already exists", "domain_name": domain_name}), 200
 
         new_domain = Domain(domain_name=domain_name, user_id=user_id, total_scans=0)
         session.add(new_domain)
         session.commit()
         session.refresh(new_domain)
 
-    return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
+        return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def permutations_route(user_id, domain_name):

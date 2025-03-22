@@ -87,10 +87,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Update localStorage when current user changes
+  useEffect(() => {
+    if (currentUser) {
+      console.log("Storing user in localStorage:", currentUser);
+      localStorage.setItem("currentUser", currentUser.user_id);
+      localStorage.setItem("user_id", currentUser.user_id); // Store in both keys for redundancy
+      
+      // Also store full user data for debugging
+      try {
+        localStorage.setItem("userDataDebug", JSON.stringify(currentUser));
+      } catch (e) {
+        console.error("Failed to store user data for debugging:", e);
+      }
+    }
+  }, [currentUser]);
+
   // Function to log out
   const logout = () => {
+    console.log("Logging out, removing user from localStorage");
     setCurrentUser(null);
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("user_id"); // Remove both keys
+    localStorage.removeItem("userDataDebug");
   };
 
   // Load user from localStorage on initial render - ONLY ONCE
@@ -100,7 +119,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return; // Prevent multiple initializations
       }
       
-      const savedUserId = localStorage.getItem("currentUser");
+      // Check both possible localStorage keys
+      const savedUserId = localStorage.getItem("currentUser") || localStorage.getItem("user_id");
+      console.log("Found user ID in localStorage:", savedUserId);
+      
       if (savedUserId) {
         // Only fetch if we don't have users yet
         let userList = users;
@@ -110,7 +132,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         const savedUser = userList.find(user => user.user_id === savedUserId);
         if (savedUser) {
+          console.log("Found matching user in users list:", savedUser);
           setCurrentUser(savedUser);
+        } else {
+          console.log("User ID found in localStorage but no matching user in users list");
         }
       }
       
@@ -120,13 +145,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     loadInitialUser();
   }, []); // Empty dependency array ensures this only runs once
-
-  // Update localStorage when current user changes
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem("currentUser", currentUser.user_id);
-    }
-  }, [currentUser]);
 
   return (
     <UserContext.Provider

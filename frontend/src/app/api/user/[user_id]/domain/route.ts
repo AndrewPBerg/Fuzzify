@@ -10,26 +10,81 @@ export async function POST(
   const user_id = params.user_id;
   
   try {
-    const body = await request.json();
+    console.log(`[API] Processing domain POST for user_id: ${user_id}`);
     
-    const response = await fetch(`${API_BASE_URL}/api/${user_id}/domain`, {
+    // Safely parse the request body
+    let body;
+    try {
+      const text = await request.text();
+      console.log('[API] Raw request body:', text);
+      body = JSON.parse(text);
+    } catch (e) {
+      console.error('[API] JSON parse error:', e);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('[API] Parsed request body:', body);
+    
+    // Validate required fields
+    if (!body.domain_name) {
+      return NextResponse.json(
+        { error: 'Missing required field: domain_name' },
+        { status: 400 }
+      );
+    }
+    
+    // Use the correct URL format for the backend API
+    const backendUrl = `${API_BASE_URL}/api/${user_id}/domain`;
+    console.log(`[API] Making request to backend URL: ${backendUrl}`);
+    
+    const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(body),
     });
     
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+    console.log(`[API] Backend response status: ${response.status}`);
+    
+    // Get the raw response text first for debugging
+    const responseText = await response.text();
+    console.log(`[API] Backend raw response: ${responseText}`);
+    
+    // Try to parse the response as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[API] Error parsing backend response as JSON:', e);
+      return NextResponse.json(
+        { error: 'Invalid JSON response from backend', raw: responseText },
+        { status: 502 }
+      );
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('[API] Backend error response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        data 
+      });
+      return NextResponse.json(
+        { error: data.error || `Backend responded with status: ${response.status} (${response.statusText})` },
+        { status: response.status }
+      );
+    }
+    
+    console.log('[API] Backend success response:', data);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error adding domain:', error);
+    console.error('[API] Error adding domain:', error);
     return NextResponse.json(
-      { error: 'Failed to add domain' },
+      { error: error instanceof Error ? error.message : 'Failed to add domain' },
       { status: 500 }
     );
   }
@@ -42,21 +97,56 @@ export async function GET(
   const user_id = params.user_id;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/api/user/${user_id}/domains`, {
+    console.log(`[API] Processing domains GET for user_id: ${user_id}`);
+    
+    // Use the correct endpoint for the backend API
+    const backendUrl = `${API_BASE_URL}/api/${user_id}/domain`;
+    console.log(`[API] Making request to backend URL: ${backendUrl}`);
+    
+    const response = await fetch(backendUrl, {
       method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
       cache: 'no-store',
     });
     
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+    console.log(`[API] Backend response status: ${response.status}`);
+    
+    // Get the raw response text first for debugging
+    const responseText = await response.text();
+    console.log(`[API] Backend raw response: ${responseText}`);
+    
+    // Try to parse the response as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[API] Error parsing backend response as JSON:', e);
+      return NextResponse.json(
+        { error: 'Invalid JSON response from backend', raw: responseText },
+        { status: 502 }
+      );
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('[API] Backend error response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        data 
+      });
+      return NextResponse.json(
+        { error: data.error || `Backend responded with status: ${response.status} (${response.statusText})` },
+        { status: response.status }
+      );
+    }
+    
+    console.log('[API] Backend success response:', data);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching domains:', error);
+    console.error('[API] Error fetching domains:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch domains from backend' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch domains from backend' },
       { status: 500 }
     );
   }

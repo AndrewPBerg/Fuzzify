@@ -9,12 +9,19 @@ interface Domain {
   total_scans: number;
 }
 
+interface DomainResponse {
+  success: boolean;
+  isDuplicate?: boolean;
+  data?: any;
+  error?: unknown;
+}
+
 interface UseDomainResult {
   domains: Domain[];
   isLoading: boolean;
   error: string | null;
   fetchDomains: () => Promise<void>;
-  addDomain: (domainName: string) => Promise<void>;
+  addDomain: (domainName: string) => Promise<DomainResponse | undefined>;
 }
 
 export function useDomains(): UseDomainResult {
@@ -83,18 +90,31 @@ export function useDomains(): UseDomainResult {
         }),
       });
       
+      // Read the response body
+      const data = await response.json();
+      
+      // Check for API errors
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        throw new Error(data.error || `Error: ${response.status}`);
       }
       
-      // Invalidate domains cache for this user
-      invalidateCache(url);
+      // Handle duplicate domain case (still a successful response)
+      const isDuplicate = data.message === "Domain already exists";
       
-      // Refresh domains after adding
-      await fetchDomains(true);
+      // Only invalidate cache and refresh if it's a new domain
+      if (!isDuplicate) {
+        // Invalidate domains cache for this user
+        invalidateCache(url);
+        
+        // Refresh domains after adding
+        await fetchDomains(true);
+      }
+      
+      return { success: true, isDuplicate, data };
     } catch (err) {
       setError('Failed to add domain');
       console.error('Error adding domain:', err);
+      return { success: false, error: err };
     } finally {
       setIsLoading(false);
     }

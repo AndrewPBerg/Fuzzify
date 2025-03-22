@@ -37,15 +37,26 @@ export async function POST(request: Request) {
     });
     
     if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Backend responded with status: ${response.status}`);
     }
     
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Ensure we have a user_id in the response
+    if (!data.user_id) {
+      throw new Error('Backend response missing user_id');
+    }
+    
+    return NextResponse.json({
+      user_id: data.user_id,
+      username: body.username,
+      message: data.message || 'User created successfully'
+    });
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { error: error instanceof Error ? error.message : 'Failed to create user' },
       { status: 500 }
     );
   }

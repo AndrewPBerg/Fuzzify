@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
+import { useDomains } from "@/hooks/useDomains";
+import { useUser } from "@/contexts/UserContext";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -27,70 +28,44 @@ const isValidDomain = (domain: string): boolean => {
 
 export function DomainRootForm() {
   const [domainRoot, setDomainRoot] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const { currentUser } = useUser();
+  const { addDomain, isLoading: isSubmitting } = useDomains();
+  
   const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!currentUser) {
+      toast.error("Please login first");
+      return;
+    }
+    
+    // Validate domain before submitting
     if (!domainRoot.trim()) {
-      toast.error("Error", {
-        description: "Please enter a domain root",
-      });
+      toast.error("Please enter a domain root");
       return;
     }
-    
-    if (!isValidDomain(domainRoot)) {
-      toast.error("Error", {
-        description: "Please enter a valid domain (e.g., example.com)",
-      });
-      return;
-    }
-    
-    // Check if domain already exists in local storage
-    const existingRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    
-    if (existingRoots.includes(domainRoot)) {
-      toast.error("Error", {
-        description: "This domain root already exists",
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Save domain root to backend via API
-      const response = await fetch('/api/domains', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ domainRoot }),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to add domain root');
+    if (!isValidDomain(domainRoot)) {
+      toast.error("Please enter a valid domain root");
+      return;
+    }
+
+    try {
+      const result = await addDomain(domainRoot.trim());
+      
+      if (result?.success) {
+        if (result.isDuplicate) {
+          toast.warning(`Domain "${domainRoot}" already exists`);
+        } else {
+          toast.success("Domain root added successfully");
+        }
+        setDomainRoot(""); // Clear the input
+      } else {
+        throw new Error(result?.error ? String(result.error) : "Unknown error");
       }
-      
-      // Update local storage
-      const updatedRoots = [...existingRoots, domainRoot];
-      localStorage.setItem("domainRoots", JSON.stringify(updatedRoots));
-      
-      // Dispatch storage event to update other components
-      window.dispatchEvent(new Event('storage'));
-      
-      toast.success("Success", {
-        description: `Domain root "${domainRoot}" has been saved`,
-      });
-      
-      setDomainRoot("");
     } catch (error) {
       console.error('Error adding domain root:', error);
-      toast.error("Error", {
-        description: "Failed to add domain root. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
+      toast.error(error instanceof Error ? error.message : "Failed to add domain root. Please try again.");
     }
   };
 
