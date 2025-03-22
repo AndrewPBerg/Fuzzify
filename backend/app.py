@@ -189,7 +189,7 @@ def test_connection():
 
 # Create a new user
 @app.route('/api/user', methods=['POST', 'GET'])
-def create_user():
+def user_route():
     """API endpoint to create a new user and return the user_id or view all users."""
     if request.method == 'GET':
         if DEBUG:
@@ -225,7 +225,7 @@ def create_user():
     return jsonify({"message": "User created successfully", "username": new_user.username}), 201
 
 @app.route('/api/<user_id>/domain', methods=['POST', 'GET'])
-def add_domain(user_id):
+def domain_route(user_id):
     """API endpoint to insert a domain for a user or view all domains for a user."""
     if request.method == 'GET':
         if DEBUG:
@@ -266,7 +266,7 @@ def add_domain(user_id):
     return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
-def handle_permutations(user_id, domain_name):
+def permutations_route(user_id, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
     if request.method == 'POST':
         if DEBUG:
