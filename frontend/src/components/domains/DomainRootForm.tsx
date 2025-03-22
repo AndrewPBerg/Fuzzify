@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useDomains } from "@/hooks/useDomains";
 import { useUser } from "@/contexts/UserContext";
+import { triggerDomainUpdate } from "./DomainRootsList";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -58,6 +59,8 @@ export function DomainRootForm() {
           toast.warning(`Domain "${domainRoot}" already exists`);
         } else {
           toast.success("Domain root added successfully");
+          // Trigger domain update event to refresh lists
+          triggerDomainUpdate();
         }
         setDomainRoot(""); // Clear the input
       } else {

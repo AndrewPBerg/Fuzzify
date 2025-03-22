@@ -224,7 +224,7 @@ def user_route():
 
     return jsonify({"message": "User created successfully", "username": new_user.username}), 201
 
-@app.route('/api/<user_id>/domain', methods=['POST', 'GET'])
+@app.route('/api/<user_id>/domain', methods=['POST', 'GET', 'DELETE'])
 def domain_route(user_id):
     """API endpoint to insert a domain for a user or view all domains for a user."""
     if request.method == 'GET':
@@ -241,6 +241,39 @@ def domain_route(user_id):
             domain_list = [{"domain_name": domain.domain_name, "total_scans": domain.total_scans} for domain in domains]
             
         return jsonify({"domains": domain_list}), 200
+    
+    elif request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete domain for user: {user_id}")
+        
+        data = request.json
+        domain_name = data.get("domain_name")
+        
+        if not domain_name:
+            return jsonify({"error": "domain_name is required"}), 400
+            
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Find the domain to delete
+            domain_to_delete = session.exec(
+                select(Domain).where(
+                    (Domain.domain_name == domain_name) & 
+                    (Domain.user_id == user_id)
+                )
+            ).first()
+            
+            if not domain_to_delete:
+                return jsonify({"error": "Domain not found"}), 404
+                
+            # Delete the domain
+            session.delete(domain_to_delete)
+            session.commit()
+            
+            return jsonify({"message": "Domain deleted successfully", "domain_name": domain_name}), 200
     
     # POST method - add a new domain
     if DEBUG:
