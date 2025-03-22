@@ -84,20 +84,41 @@ export function DomainRootsList() {
     }
     
     try {
+      // Show deletion in progress toast
+      toast.loading(`Deleting domain ${domainName}...`, {
+        id: `delete-${domainName}`, // Use ID to update this toast later
+      });
+      
+      // Attempt to delete through the hook
       const success = await deleteDomain(domainName);
       
       if (success) {
         console.log(`DomainRootsList: Successfully deleted domain: ${domainName}`);
-        toast.success(`Domain "${domainName}" has been removed`);
+        
+        toast.success(`Domain "${domainName}" has been removed`, {
+          id: `delete-${domainName}`, // Update the loading toast
+        });
         
         // Trigger event to update other components
         triggerDomainUpdate();
       } else {
+        toast.error(`Failed to delete "${domainName}"`, {
+          id: `delete-${domainName}`, // Update the loading toast
+        });
         throw new Error("Failed to delete domain");
       }
     } catch (err) {
       console.error("DomainRootsList: Error deleting domain:", err);
-      toast.error("Failed to delete domain. Please try again.");
+      
+      // Show error toast (if one isn't already showing)
+      toast.error(`Error: ${err instanceof Error ? err.message : "Unknown error"}`, {
+        id: `delete-${domainName}`,
+      });
+      
+      // Force refresh list to ensure UI is in sync
+      setTimeout(() => {
+        fetchDomains();
+      }, 1000);
     }
   };
 

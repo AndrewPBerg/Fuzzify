@@ -246,15 +246,21 @@ def domain_route(user_id):
         if DEBUG:
             logger.debug(f"Received request to delete domain for user: {user_id}")
         
-        data = request.json
-        domain_name = data.get("domain_name")
-        
-        if not domain_name:
-            return jsonify({"error": "domain_name is required"}), 400
+        # Get the domain name from request body
+        try:
+            data = request.json
+            if not data or 'domain_name' not in data:
+                return jsonify({"error": "Missing domain_name in request body"}), 400
+                
+            domain_name = data.get("domain_name")
+            logger.debug(f"Attempting to delete domain: {domain_name} for user: {user_id}")
+        except Exception as e:
+            logger.error(f"Error parsing DELETE request: {e}")
+            return jsonify({"error": "Invalid JSON in request body"}), 400
             
         with Session(engine) as session:
+            # Check if user exists
             user = session.exec(select(User).where(User.user_id == user_id)).first()
-            
             if not user:
                 return jsonify({"error": "User not found"}), 404
                 
@@ -267,13 +273,21 @@ def domain_route(user_id):
             ).first()
             
             if not domain_to_delete:
-                return jsonify({"error": "Domain not found"}), 404
+                return jsonify({"error": f"Domain '{domain_name}' not found for user {user_id}"}), 404
                 
             # Delete the domain
-            session.delete(domain_to_delete)
-            session.commit()
-            
-            return jsonify({"message": "Domain deleted successfully", "domain_name": domain_name}), 200
+            try:
+                session.delete(domain_to_delete)
+                session.commit()
+                logger.debug(f"Successfully deleted domain: {domain_name} for user: {user_id}")
+                return jsonify({
+                    "message": "Domain deleted successfully", 
+                    "domain_name": domain_name
+                }), 200
+            except Exception as e:
+                logger.error(f"Error deleting domain: {e}")
+                session.rollback()
+                return jsonify({"error": f"Failed to delete domain: {str(e)}"}), 500
     
     # POST method - add a new domain
     if DEBUG:

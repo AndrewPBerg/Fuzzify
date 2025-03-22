@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, Clock, RefreshCw } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Calendar, Clock, RefreshCw, AlertCircle } from "lucide-react";
+import { useDomains } from "@/hooks/useDomains";
+import { useUser } from "@/contexts/UserContext";
+import { triggerDomainUpdate } from "@/components/domains/DomainRootsList";
+
+// Import DOMAIN_UPDATED_EVENT from DomainRootsList or define it here
+const DOMAIN_UPDATED_EVENT = "domain-list-updated";
 
 const scheduleOptions = [
   { id: "hourly", label: "Hourly", icon: Clock },
@@ -11,19 +17,86 @@ const scheduleOptions = [
 ];
 
 export default function SchedulePage() {
-  const [domainRoots, setDomainRoots] = useState<string[]>([]);
+  const { currentUser } = useUser();
+  const { domains, isLoading, error, fetchDomains } = useDomains();
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState("daily");
   const [customHours, setCustomHours] = useState(24);
   const [schedules, setSchedules] = useState<any[]>([]);
+  
+  // Rate limiting - define the ref outside useEffect to persist between renders
+  const lastFetchTimeRef = useRef<number>(0);
 
+  // Fetch domains when component mounts or user changes
   useEffect(() => {
-    const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    setDomainRoots(storedRoots);
+    console.log("SchedulePage: Fetching domains for user", currentUser?.user_id);
     
+    if (currentUser) {
+      const currentTime = Date.now();
+      const timeSinceLastFetch = currentTime - lastFetchTimeRef.current;
+      
+      // Only fetch if it's been more than 2 seconds since last fetch
+      if (timeSinceLastFetch > 2000) {
+        console.log(`SchedulePage: Making API call (${timeSinceLastFetch}ms since last call)`);
+        fetchDomains();
+        lastFetchTimeRef.current = currentTime;
+      } else {
+        console.log(`SchedulePage: Rate limiting applied, skipping fetch (only ${timeSinceLastFetch}ms since last call)`);
+      }
+      
+      // Timeout safety to prevent infinite loading state
+      const timeoutId = setTimeout(() => {
+        if (isLoading) {
+          console.warn("SchedulePage: Loading timeout triggered - resetting loading state");
+          // This will force the component to render the empty state instead of loading indefinitely
+          triggerDomainUpdate();
+        }
+      }, 5000); // 5 second timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Get saved schedules from localStorage
     const storedSchedules = JSON.parse(localStorage.getItem("domainSchedules") || "[]");
     setSchedules(storedSchedules);
-  }, []);
+  }, [currentUser, fetchDomains, isLoading]);
+  
+  // Listen for domain update events
+  useEffect(() => {
+    const handleDomainUpdate = () => {
+      console.log("SchedulePage: Detected domain update event, refreshing...");
+      const currentTime = Date.now();
+      
+      // Apply rate limiting for event-triggered refreshes too
+      if (currentTime - lastFetchTimeRef.current > 2000) {
+        fetchDomains();
+        lastFetchTimeRef.current = currentTime;
+      } else {
+        console.log("SchedulePage: Rate limiting applied to event update");
+      }
+    };
+    
+    // Custom domain update events
+    window.addEventListener(DOMAIN_UPDATED_EVENT, handleDomainUpdate);
+    
+    // Legacy storage events
+    window.addEventListener("storage", handleDomainUpdate);
+    
+    return () => {
+      window.removeEventListener(DOMAIN_UPDATED_EVENT, handleDomainUpdate);
+      window.removeEventListener("storage", handleDomainUpdate);
+    };
+  }, [fetchDomains]);
+
+  // Debug domains data whenever it changes
+  useEffect(() => {
+    if (domains) {
+      console.log("SchedulePage: Domains data updated:", { 
+        count: domains.length,
+        isArray: Array.isArray(domains)
+      });
+    }
+  }, [domains]);
 
   const handleDomainToggle = (domain: string) => {
     setSelectedDomains(prev => 
@@ -83,6 +156,42 @@ export default function SchedulePage() {
     setSchedules(updatedSchedules);
   };
 
+  // Get domain names from domain objects
+  const getDomainNames = () => {
+    if (!domains || !Array.isArray(domains)) return [];
+    return domains.map(domain => 
+      typeof domain === 'string' ? domain : domain.domain_name
+    ).filter(Boolean);
+  };
+
+  const domainNames = getDomainNames();
+  const hasDomains = domainNames.length > 0;
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="page-container flex justify-center items-center h-[60vh]">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading domain data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="page-container flex justify-center items-center h-[60vh]">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-4 text-destructive" />
+          <h2 className="text-lg font-medium mb-2">Error Loading Domains</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-container">
       {/* Page header */}
@@ -103,13 +212,13 @@ export default function SchedulePage() {
               {/* Domain selection */}
               <div>
                 <label className="block text-sm font-medium mb-2">Select Domain Roots</label>
-                {domainRoots.length === 0 ? (
+                {!hasDomains ? (
                   <p className="text-sm text-muted-foreground">
                     No domain roots available. Please add some on the Domains page.
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto p-2 border border-border/50 rounded-md bg-background/50">
-                    {domainRoots.map(domain => (
+                    {domainNames.map(domain => (
                       <div key={domain} className="flex items-center">
                         <input
                           type="checkbox"
@@ -138,14 +247,14 @@ export default function SchedulePage() {
                       className={`flex items-center justify-center gap-2 p-2 rounded-md border ${
                         scheduleType === option.id 
                           ? "bg-primary/10 text-primary border-primary" 
-                          : domainRoots.length === 0
+                          : !hasDomains
                             ? "border-border/30 bg-muted/30 text-muted-foreground/50 cursor-not-allowed"
                             : "border-border/50 bg-background/50 hover:bg-background text-foreground"
                       }`}
-                      onClick={() => domainRoots.length > 0 && setScheduleType(option.id)}
-                      disabled={domainRoots.length === 0}
+                      onClick={() => hasDomains && setScheduleType(option.id)}
+                      disabled={!hasDomains}
                     >
-                      <option.icon size={16} className={domainRoots.length === 0 ? "opacity-50" : ""} />
+                      <option.icon size={16} className={!hasDomains ? "opacity-50" : ""} />
                       <span className="text-sm">{option.label}</span>
                     </button>
                   ))}
@@ -164,8 +273,8 @@ export default function SchedulePage() {
                     max="168"
                     value={customHours}
                     onChange={(e) => setCustomHours(parseInt(e.target.value))}
-                    className={`w-full ${domainRoots.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-                    disabled={domainRoots.length === 0}
+                    className={`w-full ${!hasDomains ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={!hasDomains}
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>1 hour</span>
@@ -177,13 +286,13 @@ export default function SchedulePage() {
               <button
                 type="submit"
                 className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  domainRoots.length === 0
+                  !hasDomains
                     ? "bg-primary/50 text-primary-foreground/70 cursor-not-allowed"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }`}
-                disabled={domainRoots.length === 0}
+                disabled={!hasDomains}
               >
-                {domainRoots.length === 0 ? "No Domain Roots Available" : "Create Schedule"}
+                {!hasDomains ? "No Domain Roots Available" : "Create Schedule"}
               </button>
             </form>
           </div>

@@ -142,6 +142,7 @@ export function useDomains(): UseDomainResult {
   const deleteDomain = useCallback(async (domainName: string): Promise<boolean> => {
     if (!currentUser) {
       setError('No user logged in');
+      console.error("[useDomains] Cannot delete domain without a logged in user");
       return false;
     }
 
@@ -149,7 +150,15 @@ export function useDomains(): UseDomainResult {
     setError(null);
 
     try {
+      // Ensure we have a valid domain name
+      if (!domainName) {
+        throw new Error("Domain name is required");
+      }
+
       const url = `/api/user/${currentUser.user_id}/domain`;
+      console.log(`[useDomains] Deleting domain '${domainName}' for user ${currentUser.user_id}`);
+      
+      // First try the new API format
       const response = await fetch(url, {
         method: 'DELETE',
         headers: {
@@ -160,25 +169,62 @@ export function useDomains(): UseDomainResult {
         }),
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || `Error: ${response.status}`);
+      // Get the raw response
+      let responseText;
+      try {
+        responseText = await response.text();
+        console.log(`[useDomains] Delete domain raw response: ${responseText}`);
+      } catch (e) {
+        console.error("[useDomains] Error reading response text:", e);
+        responseText = "";
       }
       
-      // Always invalidate cache and refresh after deletion
-      invalidateCache(url);
+      // Try to parse as JSON if possible
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log("[useDomains] Delete domain parsed response:", data);
+      } catch (e) {
+        console.warn("[useDomains] Response is not valid JSON, using as text");
+        data = { message: responseText || "Unknown response" };
+      }
       
-      // Update local state immediately by filtering out the deleted domain
-      setDomains(prev => prev.filter(d => d.domain_name !== domainName));
+      if (!response.ok) {
+        console.error(`[useDomains] Delete domain request failed with status ${response.status}:`, data);
+        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
+      }
       
-      // Also do a fresh fetch to ensure we're in sync with server
-      fetchDomains(true);
+      console.log(`[useDomains] Successfully deleted domain: ${domainName}`);
+      
+      // Invalidate all domain-related caches to ensure fresh data
+      invalidateCache(`/api/user/${currentUser.user_id}/domain`);
+      invalidateCache(`/api/user/${currentUser.user_id}`);
+      
+      // Update local state immediately for a more responsive UI
+      setDomains(prev => {
+        const filtered = prev.filter(d => {
+          // Handle both string and object formats
+          const currentDomainName = typeof d === 'string' ? d : d.domain_name;
+          const doesMatch = currentDomainName === domainName;
+          if (doesMatch) {
+            console.log(`[useDomains] Removing domain ${currentDomainName} from local state`);
+          }
+          return !doesMatch;
+        });
+        console.log(`[useDomains] Updated domains in state: ${filtered.length} items remaining`);
+        return filtered;
+      });
+      
+      // Also fetch fresh data after a short delay
+      setTimeout(() => {
+        console.log("[useDomains] Refreshing domains after deletion");
+        fetchDomains(true);
+      }, 500); // Small delay to allow backend processing
       
       return true;
     } catch (err) {
-      setError('Failed to delete domain');
       console.error('[useDomains] Error deleting domain:', err);
+      setError(`Failed to delete domain: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     } finally {
       setIsLoading(false);
