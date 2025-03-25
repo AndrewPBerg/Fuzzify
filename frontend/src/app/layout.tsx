@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { Layout } from "@/components/layout/Layout";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { UserProvider } from "@/contexts/UserContext";
 import '@/index.css';
 import Script from "next/script";
 
@@ -47,11 +48,13 @@ export default function RootLayout({
         <QueryProvider>
           <ThemeProvider>
             <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Layout>
-                {children}
-              </Layout>
+              <UserProvider>
+                <Toaster />
+                <Sonner />
+                <Layout>
+                  {children}
+                </Layout>
+              </UserProvider>
             </TooltipProvider>
           </ThemeProvider>
         </QueryProvider>

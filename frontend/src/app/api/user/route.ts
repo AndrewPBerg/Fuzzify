@@ -1,29 +1,24 @@
 import { NextResponse } from 'next/server';
 
-// Mock user ID for demonstration purposes
-// In a real app, this would come from authentication
-const MOCK_USER_ID = "user123";
+// Define the backend API URL - adjust this based on your environment setup
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10002';
 
 export async function GET() {
   try {
-    // Fetch user settings from backend
-    const response = await fetch(`http://localhost:10002/user/${MOCK_USER_ID}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const response = await fetch(`${API_BASE_URL}/api/user`, {
+      cache: 'no-store',
     });
-
+    
     if (!response.ok) {
-      throw new Error(`Error fetching user settings: ${response.statusText}`);
+      throw new Error(`Backend responded with status: ${response.status}`);
     }
-
+    
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching user settings:', error);
+    console.error('Error fetching users:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch user settings' },
+      { error: 'Failed to fetch users from backend' },
       { status: 500 }
     );
   }
@@ -31,27 +26,37 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const settings = await request.json();
+    const body = await request.json();
     
-    // Send settings to backend
-    const response = await fetch(`http://localhost:10002/user/${MOCK_USER_ID}`, {
+    const response = await fetch(`${API_BASE_URL}/api/user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(body),
     });
-
+    
     if (!response.ok) {
-      throw new Error(`Error saving user settings: ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Backend responded with status: ${response.status}`);
     }
-
+    
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Ensure we have a user_id in the response
+    if (!data.user_id) {
+      throw new Error('Backend response missing user_id');
+    }
+    
+    return NextResponse.json({
+      user_id: data.user_id,
+      username: body.username,
+      message: data.message || 'User created successfully'
+    });
   } catch (error) {
-    console.error('Error saving user settings:', error);
+    console.error('Error creating user:', error);
     return NextResponse.json(
-      { error: 'Failed to save user settings' },
+      { error: error instanceof Error ? error.message : 'Failed to create user' },
       { status: 500 }
     );
   }

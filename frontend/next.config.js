@@ -7,7 +7,6 @@ const nextConfig = {
   webpack: (config) => {
     return config;
   },
-  output: 'export',
   
     // Add any other necessary configuration
     // reactStrictMode: true,
