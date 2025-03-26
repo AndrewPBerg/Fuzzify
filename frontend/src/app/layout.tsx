@@ -6,6 +6,7 @@ import { Layout } from "@/components/layout/Layout";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import '@/index.css';
 import Script from "next/script";
+import { AuthCheck } from "@/components/auth/loggedInCheck";
 
 export const metadata = {
   title: 'Settings Hub',
@@ -49,9 +50,11 @@ export default function RootLayout({
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <Layout>
-                {children}
-              </Layout>
+              <AuthCheck>
+                <Layout>
+                  {children}
+                </Layout>
+              </AuthCheck>
             </TooltipProvider>
           </ThemeProvider>
         </QueryProvider>

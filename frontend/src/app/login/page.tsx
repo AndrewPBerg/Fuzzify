@@ -41,8 +41,23 @@ export default function LoginPage() {
     if (confirm(`Are you sure you want to delete the user "${user.username}"?`)) {
       deleteUser.mutate(user.user_id);
       if (selectedExistingUser === user.username) {
+        localStorage.removeItem("currentUser"); // Remove from local storage
         setSelectedExistingUser("");
       }
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUsername) return;
+    
+    setIsCreating(true);
+    try {
+      await createUser.mutateAsync(newUsername);
+      setNewUsername(""); // Clear input after successful creation
+    } catch (error) {
+      console.error("Error creating user:", error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -65,7 +80,9 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Select an existing user:</h3>
+            {/* conditional rendering for users directions */}
+            {users && users.length > 0 && <h3 className="text-sm font-medium">Select an existing user:</h3>}
+            {users && users.length === 0 && <h3 className="text-sm font-medium">No users available. Please create a new user.</h3>}
             <div className="grid gap-2">
               {users?.map((user) => (
                 <div 
@@ -120,13 +137,13 @@ export default function LoginPage() {
               if (selectedExistingUser) {
                 handleExistingLogin();
               } else if (newUsername) {
-                createUser.mutateAsync(newUsername);
+                handleCreateUser();
               }
             }} 
             className="w-full"
-            disabled={(!selectedExistingUser && !newUsername) || isCreating}
+            disabled={(!selectedExistingUser && !newUsername) || isCreating || createUser.isPending}
           >
-            {isCreating ? (
+            {isCreating || createUser.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...

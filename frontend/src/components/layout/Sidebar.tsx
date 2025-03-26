@@ -56,6 +56,8 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+
+
 // Horizontal sidebar component
 const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
   return (
@@ -114,11 +116,11 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{localStorage.getItem("currentUser")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild className="text-destructive">
-                <Link href="/login">
+                <Link href="/login" onClick={() => localStorage.removeItem("currentUser")}>
                   <span>Logout</span>
                 </Link>
               </DropdownMenuItem>
@@ -543,12 +545,12 @@ export function Sidebar() {
             side={lockPosition === LockPosition.Right ? "left" : "right"} 
             className="w-56 mt-1"
           >
-            <DropdownMenuLabel>My Account</DropdownMenuLabel> 
+            <DropdownMenuLabel>{localStorage.getItem("currentUser")}</DropdownMenuLabel> 
             {/* TODO: Change `My Account` to current user's name */}
             {/* TODO: also need todo for horizontal sidebar */}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-destructive">
-              <Link href="/login">
+              <Link href="/login" onClick={() => localStorage.removeItem("currentUser")}>
                 <span>Logout</span>
               </Link>
             </DropdownMenuItem>
