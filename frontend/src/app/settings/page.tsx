@@ -109,20 +109,29 @@ export default function SettingsPage() {
     try {
       // Update username if changed
       const currentUser = userStorage.getCurrentUser();
+      let updatedUsername = formState.name;
+      
       if (formState.name !== currentUser.username && currentUser.userId) {
         // Use PATCH request when user has an ID
-        await updateUsernameMutation.mutateAsync({
+        const result = await updateUsernameMutation.mutateAsync({
           userId: currentUser.userId,
           username: formState.name
         });
+        updatedUsername = result.username;
       } else if (formState.name !== currentUser.username) {
         // Fallback to POST request for new users
-        await createUserMutation.mutateAsync(formState.name);
+        const result = await createUserMutation.mutateAsync(formState.name);
+        updatedUsername = result.username;
       }
       
       // Apply theme setting
       if (formState.theme) {
         setTheme(formState.theme as "light" | "dark" | "system");
+      }
+      
+      // Ensure all settings are stored in localStorage
+      if (currentUser.userId) {
+        userStorage.setCurrentUser(updatedUsername, currentUser.userId);
       }
       
       // Store horizontal sidebar preference in localStorage

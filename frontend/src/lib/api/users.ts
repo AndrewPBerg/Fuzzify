@@ -9,6 +9,7 @@ interface User {
 interface CreateUserResponse {
   message: string;
   username: string;
+  user_id: string;
 }
 
 // Local storage keys
