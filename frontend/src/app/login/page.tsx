@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,30 @@ import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedExistingUser, setSelectedExistingUser] = useState<string>(""); // used for selecting existing usernames
   const [selectedUserId, setSelectedUserId] = useState<string>(""); // store the user_id of the selected user
   const [newUsername, setNewUsername] = useState(""); // used for creating new usernames
   const [isCreating, setIsCreating] = useState(false);
+  const [shouldFocusInput, setShouldFocusInput] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key for forcing re-renders
 
   const { data: users = [], isLoading: isLoadingUsers } = useUsers();
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
+
+  // Effect to handle input focus when needed
+  useEffect(() => {
+    if (shouldFocusInput && inputRef.current) {
+      // Small delay to ensure browser has completed all operations
+      const timeoutId = setTimeout(() => {
+        inputRef.current?.focus();
+        setShouldFocusInput(false);
+      }, 10);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [shouldFocusInput]);
 
   const handleExistingLogin = async () => {
     // If an existing user is selected, use that
@@ -39,16 +55,38 @@ export default function LoginPage() {
 
   const handleDeleteUser = (user: { user_id: string, username: string }, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection of the user when clicking delete
-    if (confirm(`Are you sure you want to delete the user "${user.username}"?`)) {
-      // First check if this is the selected user and reset selection if it is
-      if (selectedExistingUser === user.username) {
+    
+    // Check if this is the selected user and reset selection if it is
+    if (selectedExistingUser === user.username) {
+      userStorage.clearCurrentUser();
+      setSelectedExistingUser("");
+      setSelectedUserId("");
+    }
+    
+    // Handle the deletion without confirmation
+    deleteUser.mutate(user.user_id, {
+      onSuccess: () => {
+        // Always clear userStorage after deletion
         userStorage.clearCurrentUser();
         setSelectedExistingUser("");
         setSelectedUserId("");
+        
+        // Force re-render after successful deletion
+        setRefreshKey(prev => prev + 1);
+        
+        // Focus on input field using a more aggressive approach with multiple fallbacks
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          } else {
+            const input = document.getElementById('username-input');
+            if (input) {
+              (input as HTMLInputElement).focus();
+            }
+          }
+        }, 100);
       }
-      // Then handle the deletion
-      deleteUser.mutate(user.user_id);
-    }
+    });
   };
 
   const handleCreateUser = async () => {
@@ -89,7 +127,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[90vh]">
+    <div key={refreshKey} className="flex items-center justify-center min-h-[90vh]">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">Welcome to DNS Fuzzer!</CardTitle>
@@ -135,12 +173,14 @@ export default function LoginPage() {
               ))}
             </div>
             <div className="mt-4">
-              <h3 className="text-sm font-medium">Or create a new user:</h3>
+              <label htmlFor="username-input" className="text-sm font-medium block mb-2">Or create a new user:</label>
               <Input 
+                ref={inputRef}
                 id="username-input"
                 name="username"
                 className="w-full"
                 type="text"
+                autoComplete="username"
                 placeholder="Enter a new username"
                 value={newUsername}
                 onChange={handleUsernameChange}
