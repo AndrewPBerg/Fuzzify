@@ -21,7 +21,7 @@ interface CreateDomainResponse {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001';
 
 const fetchDomains = async (userId: string): Promise<Domain[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/domain/${userId}`);
+  const response = await fetch(`${API_BASE_URL}/api/${userId}/domain`);
   if (!response.ok) {
     throw new Error("Failed to fetch domains");
   }
@@ -40,7 +40,7 @@ const fetchDomains = async (userId: string): Promise<Domain[]> => {
 };
 
 const createDomain = async ({ userId, domain_name }: { userId: string, domain_name: string }): Promise<CreateDomainResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/domain/${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/${userId}/domain`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -68,7 +68,7 @@ const createDomain = async ({ userId, domain_name }: { userId: string, domain_na
 };
 
 const deleteDomain = async ({ userId, domain_name }: { userId: string, domain_name: string }): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/api/domain/${userId}`, {
+  const response = await fetch(`${API_BASE_URL}/api/${userId}/domain`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

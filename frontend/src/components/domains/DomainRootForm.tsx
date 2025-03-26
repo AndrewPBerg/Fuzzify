@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateDomain } from "@/lib/api/domains";
+import { userStorage } from "@/lib/api/users";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -56,10 +57,12 @@ export function DomainRootForm() {
       return;
     }
     
+    const currentUser = userStorage.getCurrentUser();
+    
     // Use the mutation from domains.ts
     createDomainMutation.mutate(
       { 
-        userId: localStorage.getItem("currentUser") || "", 
+        userId: currentUser.userId, 
         domain_name: domainRoot 
       },
       {
