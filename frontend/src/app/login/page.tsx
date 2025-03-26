@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [newUsername, setNewUsername] = useState(""); // used for creating new usernames
   const [isCreating, setIsCreating] = useState(false);
 
-  const { data: users, isLoading: isLoadingUsers } = useUsers();
+  const { data: users = [], isLoading: isLoadingUsers } = useUsers();
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
 
@@ -40,12 +40,14 @@ export default function LoginPage() {
   const handleDeleteUser = (user: { user_id: string, username: string }, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection of the user when clicking delete
     if (confirm(`Are you sure you want to delete the user "${user.username}"?`)) {
-      deleteUser.mutate(user.user_id);
+      // First check if this is the selected user and reset selection if it is
       if (selectedExistingUser === user.username) {
         userStorage.clearCurrentUser();
         setSelectedExistingUser("");
         setSelectedUserId("");
       }
+      // Then handle the deletion
+      deleteUser.mutate(user.user_id);
     }
   };
 
@@ -60,6 +62,21 @@ export default function LoginPage() {
       console.error("Error creating user:", error);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  // Safe handler for username input changes
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const value = e.target.value;
+      setNewUsername(value);
+      // Only clear selection if we're actually typing something
+      if (value) {
+        setSelectedExistingUser(""); 
+        setSelectedUserId("");
+      }
+    } catch (error) {
+      console.error("Error in input change handler:", error);
     }
   };
 
@@ -84,7 +101,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             {/* conditional rendering for users directions */}
             {users && users.length > 0 && <h3 className="text-sm font-medium">Select an existing user:</h3>}
-            {users && users.length === 0 && <h3 className="text-sm font-medium">No users available. Please create a new user.</h3>}
+            {(!users || users.length === 0) && <h3 className="text-sm font-medium">No users available. Please create a new user.</h3>}
             <div className="grid gap-2">
               {users?.map((user) => (
                 <div 
@@ -126,11 +143,7 @@ export default function LoginPage() {
                 type="text"
                 placeholder="Enter a new username"
                 value={newUsername}
-                onChange={(e) => {
-                  setNewUsername(e.target.value);
-                  setSelectedExistingUser(""); // Clear selected user when typing new username
-                  setSelectedUserId(""); // Also clear the selected user ID
-                }}
+                onChange={handleUsernameChange}
               />
             </div>
           </div>
