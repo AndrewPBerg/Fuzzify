@@ -6,6 +6,7 @@ import { Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDomains, useDeleteDomain } from "@/lib/api/domains";
 import { userStorage } from "@/lib/api/users";
+import { useGeneratePermutations } from "@/lib/api/permuatations";
 
 export function DomainRootsList() {
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
@@ -14,6 +15,7 @@ export function DomainRootsList() {
   const { userId } = userStorage.getCurrentUser();
   const { data: domainData, isLoading: isLoadingDomains, refetch } = useDomains(userId);
   const deleteDomainMutation = useDeleteDomain();
+  const generatePermutationsMutation = useGeneratePermutations();
 
   // Initial data load - prioritize API data on page load/reload
   useEffect(() => {
@@ -88,6 +90,18 @@ export function DomainRootsList() {
     }
   };
 
+  const handleGeneratePermutations = async (domainName: string) => {
+    try {
+      await generatePermutationsMutation.mutateAsync({
+        userId,
+        domainName
+      });
+    } catch (error) {
+      // Error handling is already done in the mutation hook
+      console.error("Error generating permutations:", error);
+    }
+  };
+
   if (isLoading || isLoadingDomains) {
     return (
       <div className="flex items-center justify-center mt-4 h-10">
@@ -116,14 +130,14 @@ export function DomainRootsList() {
                 variant="ghost" 
                 size="sm" 
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
-                onClick={() => {
-                  toast({ //TODO remove placehold when implemented
-                    title: "Run Placeholder",
-                    description: `Feature to run scan for "${root}" coming soon`,
-                  });
-                }}
+                onClick={() => handleGeneratePermutations(root)}
+                disabled={generatePermutationsMutation.isPending}
               >
-                <Play size={14} />
+                {generatePermutationsMutation.isPending && generatePermutationsMutation.variables?.domainName === root ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Play size={14} />
+                )}
                 <span className="sr-only">Run Now</span>
               </Button>
               <Button 

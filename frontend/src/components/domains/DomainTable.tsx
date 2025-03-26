@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePermutations } from "@/lib/api/permuatations";
 
 // Define domain interface
 interface Domain {
-  id: number;
-  name: string;
-  ip: string;
-  created: string;
-  owner: string;
-  status: string;
-  threatLevel: string;
+  id?: number; // Added optional id field for React keys
+  permutation_name: string;
+  domain_name: string;
+  server: string | null;
+  mail_server: string | null;
+  risk: boolean | null;
+  ip_address: string | null;
 }
 
 interface Column {
@@ -23,19 +24,18 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { key: "name", label: "Domain Name", sortable: true },
-  { key: "ip", label: "IP Address", sortable: true },
-  { key: "created", label: "Created Date", sortable: true },
-  { key: "owner", label: "Owner", sortable: true },
-  { key: "status", label: "Status", sortable: true },
-  { key: "threatLevel", label: "Threat Level", sortable: true }
+  { key: "permutation_name", label: "Permutation Name", sortable: true },
+  { key: "domain_name", label: "Domain Root", sortable: true },
+  { key: "ip_address", label: "IP Address", sortable: true },
+  { key: "server", label: "Web Server", sortable: true },
+  { key: "mail_server", label: "Mail Server", sortable: true },
+  { key: "risk", label: "Risk Level", sortable: true }
 ];
 
 const threatIcons = {
-  critical: <ShieldAlert className="text-rose-500" size={16} />,
-  warning: <ShieldAlert className="text-amber-500" size={16} />,
-  secure: <ShieldCheck className="text-emerald-500" size={16} />,
-  "false-positive": <ShieldX className="text-blue-500" size={16} />
+  true: <ShieldAlert className="text-rose-500" size={16} />,
+  false: <ShieldCheck className="text-emerald-500" size={16} />,
+  null: <ShieldX className="text-blue-500" size={16} />
 };
 
 const ITEMS_PER_PAGE = 5;
@@ -44,7 +44,7 @@ export function DomainTable() {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState("name");
+  const [sortColumn, setSortColumn] = useState("permutation_name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,6 +54,19 @@ export function DomainTable() {
   });
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
+  
+  // Get userId from localStorage
+  const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") || "default-user" : "default-user";
+  
+  // Use the permutations hook
+  const { 
+    data: permutationsData, 
+    isLoading: permutationsLoading, 
+    error: permutationsError 
+  } = usePermutations(
+    userId, 
+    selectedDomainRoot || "",
+  );
 
   // Fetch domain roots from localStorage
   useEffect(() => {
@@ -70,53 +83,43 @@ export function DomainTable() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Fetch domain permutations when a domain root is selected
+  // Update domains state when permutations data changes
   useEffect(() => {
-    if (!selectedDomainRoot) {
-      // No domain root selected, just set empty domains and stop loading
-      setDomains([]);
-      setLoading(false);
-      return;
-    }
-
-    const fetchDomainPermutations = async () => {
-      setLoading(true);
-      setError(null);
+    if (permutationsData) {
+      // Transform data to match our Domain interface
+      const transformedData = permutationsData.map((item, index) => ({
+        id: index + 1,
+        permutation_name: item.permutation_name,
+        domain_name: item.domain_name,
+        server: item.server,
+        mail_server: item.mail_server,
+        risk: item.risk,
+        ip_address: item.ip_address
+      }));
       
-      try {
-        const response = await fetch(`/api/domains/permutations?domain=${selectedDomainRoot}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching domain permutations: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        // Transform the data to match our domain interface
-        const transformedData = data.map((item: any, index: number) => ({
-          id: index + 1,
-          name: item.domain || item.name,
-          ip: item.ip,
-          created: item.created,
-          owner: item.owner,
-          status: item.status,
-          threatLevel: item.threatLevel
-        }));
-        
-        setDomains(transformedData);
-      } catch (error) {
-        console.error('Error fetching domain permutations:', error);
-        setError('Failed to fetch domain permutations. Please try again.');
-        toast.error("Error", {
-          description: "Failed to fetch domain permutations. Please try again.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+      setDomains(transformedData);
+    } else if (!selectedDomainRoot) {
+      setDomains([]);
+    }
+  }, [permutationsData, selectedDomainRoot]);
+
+  // Update loading and error states based on the query
+  useEffect(() => {
+    setLoading(permutationsLoading);
     
-    fetchDomainPermutations();
-  }, [selectedDomainRoot]);
+    if (permutationsError) {
+      const errorMessage = permutationsError instanceof Error 
+        ? permutationsError.message 
+        : 'Failed to fetch domain permutations';
+      
+      setError(errorMessage);
+      toast.error("Error", {
+        description: errorMessage,
+      });
+    } else {
+      setError(null);
+    }
+  }, [permutationsLoading, permutationsError]);
 
   // Handle sorting
   const handleSort = (column: string) => {
@@ -132,14 +135,17 @@ export function DomainTable() {
   const filteredDomains = domains.filter(domain => {
     // Apply search filter
     const matchesSearch = Object.values(domain).some(
-      value => value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      value => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
     
     // Apply status filter
-    const matchesStatus = filters.status === "" || domain.status === filters.status;
+    const matchesStatus = filters.status === "" || domain.server === filters.status;
     
     // Apply threat level filter
-    const matchesThreatLevel = filters.threatLevel === "" || domain.threatLevel === filters.threatLevel;
+    const matchesThreatLevel = filters.threatLevel === "" || 
+      (filters.threatLevel === "true" && domain.risk === true) ||
+      (filters.threatLevel === "false" && domain.risk === false) ||
+      (filters.threatLevel === "null" && domain.risk === null);
     
     return matchesSearch && matchesStatus && matchesThreatLevel;
   });
@@ -230,10 +236,11 @@ export function DomainTable() {
               onChange={(e) => handleFilterChange("status", e.target.value)}
               className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
             >
-              <option value="">Filter by Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
+              <option value="">Filter by Server Type</option>
+              <option value="apache">Apache</option>
+              <option value="nginx">Nginx</option>
+              <option value="cloudflare">Cloudflare</option>
+              <option value="other">Other</option>
             </select>
           </div>
           
@@ -244,11 +251,10 @@ export function DomainTable() {
               onChange={(e) => handleFilterChange("threatLevel", e.target.value)}
               className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
             >
-              <option value="">Filter by Threat Level</option>
-              <option value="critical">Critical</option>
-              <option value="warning">Warning</option>
-              <option value="secure">Secure</option>
-              <option value="false-positive">False Positive</option>
+              <option value="">Filter by Risk Level</option>
+              <option value="true">High Risk</option>
+              <option value="false">Low Risk</option>
+              <option value="null">Unknown</option>
             </select>
           </div>
         </div>
@@ -334,39 +340,35 @@ export function DomainTable() {
                   className="hover:bg-muted/20 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {domain.name}
+                    {domain.permutation_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.ip}
+                    {domain.domain_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.created}
+                    {domain.ip_address || "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.owner}
+                    {domain.server || "Unknown"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium",
-                      domain.status === "active" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                      domain.status === "inactive" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                      domain.status === "pending" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                    )}>
-                      {domain.status}
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {domain.mail_server || "Unknown"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-1.5">
-                      {threatIcons[domain.threatLevel as keyof typeof threatIcons]}
+                      {domain.risk === true ? 
+                        threatIcons.true : 
+                        domain.risk === false ? 
+                          threatIcons.false : 
+                          threatIcons.null}
                       <span className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium",
-                        domain.threatLevel === "critical" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                        domain.threatLevel === "warning" && "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-                        domain.threatLevel === "secure" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                        domain.threatLevel === "false-positive" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                        domain.risk === true && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+                        domain.risk === false && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+                        domain.risk === null && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
                       )}>
-                        {domain.threatLevel === "false-positive" ? "False Positive" : 
-                          domain.threatLevel.charAt(0).toUpperCase() + domain.threatLevel.slice(1)}
+                        {domain.risk === true ? "High Risk" : 
+                          domain.risk === false ? "Low Risk" : "Unknown"}
                       </span>
                     </div>
                   </td>

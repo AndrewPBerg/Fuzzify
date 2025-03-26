@@ -11,6 +11,7 @@ import time
 from models import User, Domain, Permutation
 import threading
 from uuid import uuid4
+from test_perm import generate_and_store_permutations
 
 # Enable Debugging for Logs
 DEBUG = True
@@ -350,38 +351,7 @@ def permutations_route(user_id, domain_name):
             if not user:
                 return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
-            # Assuming permutations are generated here (code omitted for brevity)
-            # THIS IS WHERE DNSTWIST IS CALLED!!!
-            generated_permutations = []  # Replace with actual permutation generation logic
-            # Sample JSON POST request for adding permutations:
- 
-            """
-            sample JSON POST request:
-            {
-                "domain_name": "root.com",
-                "permutation_name": "groot.com",
-            
-                "optional_features": {
-                "server": "example.com",
-                "mail_server": "mail.example.com",
-                "risk": true,
-                "ip_address": "192.168.1.1"
-                }
-                
-            }
-            """
-
-            for perm_name in generated_permutations:
-                # Extract optional features from the request
-                optional_features = request.json.get("optional_features", {})
-                new_permutation = Permutation(
-                    permutation_name=perm_name,
-                    domain_name=domain_name,
-                    **optional_features  # (@AndrewPBerg: this is my favorit syntax ever)
-                )
-                session.add(new_permutation)
-
-            session.commit()
+            generate_and_store_permutations(domain_name)
 
         return jsonify({"message": "Permutations generated and added to database"}), 201
 
