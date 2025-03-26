@@ -82,11 +82,11 @@ export function DomainRootsList() {
       }
     } catch (error) {
       console.error("Error deleting domain:", error);
-      toast({
-        title: "Error",
-        description: `Failed to delete domain "${root}". Please try again.`,
-        variant: "destructive"
-      });
+      // toast({
+      //   title: "Error",
+      //   description: `Failed to delete domain "${root}". Please try again.`,
+      //   variant: "destructive"
+      // });
     }
   };
 

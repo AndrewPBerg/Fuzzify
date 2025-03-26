@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePermutations } from "@/lib/api/permuatations";
@@ -20,16 +20,15 @@ interface Domain {
 interface Column {
   key: string;
   label: string;
-  sortable?: boolean;
 }
 
 const columns: Column[] = [
-  { key: "permutation_name", label: "Permutation Name", sortable: true },
-  { key: "domain_name", label: "Domain Root", sortable: true },
-  { key: "ip_address", label: "IP Address", sortable: true },
-  { key: "server", label: "Web Server", sortable: true },
-  { key: "mail_server", label: "Mail Server", sortable: true },
-  { key: "risk", label: "Risk Level", sortable: true }
+  { key: "permutation_name", label: "Permutation Name" },
+  { key: "domain_name", label: "Domain Root" },
+  { key: "ip_address", label: "IP Address" },
+  { key: "server", label: "Web Server" },
+  { key: "mail_server", label: "Mail Server" },
+  { key: "risk", label: "Risk Level" }
 ];
 
 const threatIcons = {
@@ -44,8 +43,6 @@ export function DomainTable() {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState("permutation_name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
@@ -118,16 +115,6 @@ export function DomainTable() {
     }
   }, [permutationsLoading, permutationsError]);
 
-  // Handle sorting
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
   // Apply filters and search
   const filteredDomains = domains.filter(domain => {
     // Apply search filter
@@ -138,25 +125,11 @@ export function DomainTable() {
     return matchesSearch;
   });
 
-  // Sort filtered domains
-  const sortedDomains = [...filteredDomains].sort((a, b) => {
-    // @ts-ignore - dynamic property access
-    const aValue = a[sortColumn];
-    // @ts-ignore - dynamic property access
-    const bValue = b[sortColumn];
-    
-    if (sortDirection === "asc") {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
-    }
-  });
-
   // Calculate pagination
-  const totalPages = Math.ceil(sortedDomains.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredDomains.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPageData = sortedDomains.slice(startIndex, endIndex);
+  const currentPageData = filteredDomains.slice(startIndex, endIndex);
 
   // Reset to first page when filters or items per page change
   useEffect(() => {
@@ -310,24 +283,9 @@ export function DomainTable() {
                 {columns.map((column) => (
                   <th 
                     key={column.key}
-                    className={cn(
-                      "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
-                      column.sortable && "cursor-pointer hover:text-foreground"
-                    )}
-                    onClick={() => column.sortable && handleSort(column.key)}
+                    className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                   >
-                    <div className="flex items-center gap-1">
-                      {column.label}
-                      {column.sortable && sortColumn === column.key && (
-                        <span className="text-foreground">
-                          {sortDirection === "asc" ? (
-                            <ChevronUp size={14} />
-                          ) : (
-                            <ChevronDown size={14} />
-                          )}
-                        </span>
-                      )}
-                    </div>
+                    {column.label}
                   </th>
                 ))}
               </tr>
@@ -383,7 +341,7 @@ export function DomainTable() {
         <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
+              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredDomains.length)} of {filteredDomains.length} domains
             </span>
             <div className="flex items-center gap-1">
               <span className="text-sm text-muted-foreground">Rows:</span>
