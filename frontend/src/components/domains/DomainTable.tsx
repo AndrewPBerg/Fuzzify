@@ -68,15 +68,17 @@ export function DomainTable() {
     selectedDomainRoot || "",
   );
 
-  // Fetch domain roots from localStorage
+  // Fetch domain roots from localStorage on component mount
   useEffect(() => {
     const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
     setDomainRoots(storedRoots);
     
     // Add event listener for storage changes
-    const handleStorageChange = () => {
-      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-      setDomainRoots(updatedRoots);
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "domainRoots") {
+        const updatedRoots = JSON.parse(event.newValue || "[]");
+        setDomainRoots(updatedRoots);
+      }
     };
     
     window.addEventListener("storage", handleStorageChange);
