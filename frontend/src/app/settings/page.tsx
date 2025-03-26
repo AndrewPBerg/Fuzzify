@@ -132,6 +132,9 @@ export default function SettingsPage() {
       // Ensure all settings are stored in localStorage
       if (currentUser.userId) {
         userStorage.setCurrentUser(updatedUsername, currentUser.userId);
+        
+        // Dispatch custom event to notify components of username change
+        window.dispatchEvent(new CustomEvent("userUpdate"));
       }
       
       // Store horizontal sidebar preference in localStorage

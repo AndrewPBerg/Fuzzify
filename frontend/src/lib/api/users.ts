@@ -23,6 +23,11 @@ export const userStorage = {
   setCurrentUser: (username: string, userId: string) => {
     localStorage.setItem(USER_STORAGE_KEYS.CURRENT_USER, username);
     localStorage.setItem(USER_STORAGE_KEYS.USER_ID, userId);
+    
+    // Dispatch custom event to notify components of username change
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("userUpdate"));
+    }
   },
   
   clearCurrentUser: () => {
