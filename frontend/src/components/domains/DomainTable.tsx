@@ -48,10 +48,6 @@ export function DomainTable() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({
-    status: "",
-    threatLevel: ""
-  });
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
@@ -68,17 +64,15 @@ export function DomainTable() {
     selectedDomainRoot || "",
   );
 
-  // Fetch domain roots from localStorage on component mount
+  // Fetch domain roots from localStorage
   useEffect(() => {
     const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
     setDomainRoots(storedRoots);
     
     // Add event listener for storage changes
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "domainRoots") {
-        const updatedRoots = JSON.parse(event.newValue || "[]");
-        setDomainRoots(updatedRoots);
-      }
+    const handleStorageChange = () => {
+      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+      setDomainRoots(updatedRoots);
     };
     
     window.addEventListener("storage", handleStorageChange);
@@ -140,16 +134,7 @@ export function DomainTable() {
       value => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
     
-    // Apply status filter
-    const matchesStatus = filters.status === "" || domain.server === filters.status;
-    
-    // Apply threat level filter
-    const matchesThreatLevel = filters.threatLevel === "" || 
-      (filters.threatLevel === "true" && domain.risk === true) ||
-      (filters.threatLevel === "false" && domain.risk === false) ||
-      (filters.threatLevel === "null" && domain.risk === null);
-    
-    return matchesSearch && matchesStatus && matchesThreatLevel;
+    return matchesSearch;
   });
 
   // Sort filtered domains
@@ -175,36 +160,24 @@ export function DomainTable() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filters, selectedDomainRoot]);
+  }, [searchQuery, selectedDomainRoot]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  // Handle filter changes
-  const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Clear all filters
+  // Clear filters
   const clearFilters = () => {
-    setFilters({
-      status: "",
-      threatLevel: ""
-    });
     setSearchQuery("");
   };
 
   return (
     <div className="glass-card rounded-lg overflow-hidden shadow-sm animate-scale-in">
       <div className="p-4 border-b border-border/50">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Domain Root Selector */}
-          <div className="md:col-span-2">
+          <div>
             <select
               value={selectedDomainRoot || ""}
               onChange={(e) => setSelectedDomainRoot(e.target.value || null)}
@@ -218,7 +191,7 @@ export function DomainTable() {
           </div>
           
           {/* Search */}
-          <div className="relative md:col-span-2">
+          <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
               <Search size={16} />
             </div>
@@ -230,45 +203,16 @@ export function DomainTable() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
-          {/* Status filter */}
-          <div>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
-            >
-              <option value="">Filter by Server Type</option>
-              <option value="apache">Apache</option>
-              <option value="nginx">Nginx</option>
-              <option value="cloudflare">Cloudflare</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          
-          {/* Threat Level filter */}
-          <div>
-            <select
-              value={filters.threatLevel}
-              onChange={(e) => handleFilterChange("threatLevel", e.target.value)}
-              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
-            >
-              <option value="">Filter by Risk Level</option>
-              <option value="true">High Risk</option>
-              <option value="false">Low Risk</option>
-              <option value="null">Unknown</option>
-            </select>
-          </div>
         </div>
         
         {/* Clear filters button */}
-        {(filters.status || filters.threatLevel || searchQuery) && (
+        {searchQuery && (
           <div className="flex justify-end mt-3">
             <button
               onClick={clearFilters}
               className="text-xs py-1 px-2.5 text-muted-foreground border border-border/50 rounded-lg hover:bg-background transition-colors"
             >
-              Clear Filters
+              Clear Search
             </button>
           </div>
         )}
