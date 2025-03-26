@@ -1,39 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FlaskConical } from "lucide-react";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { userStorage, useUsers, useCreateUser, useUpdateUsername } from "@/lib/api/users";
 
 // Define settings sections and fields
 const settingsSections = [
-  {
-    id: "general",
-    title: "General",
-    description: "Configure general application settings",
-    fields: [
-      {
-        id: "notifications",
-        label: "Email Notifications",
-        type: "toggle",
-        description: "Receive email notifications for important alerts"
-      },
-      {
-        id: "timezone",
-        label: "Timezone",
-        type: "select",
-        description: "Select your local timezone for accurate time display",
-        options: [
-          { value: "utc", label: "UTC" },
-          { value: "est", label: "Eastern Time (EST)" },
-          { value: "cst", label: "Central Time (CST)" },
-          { value: "mst", label: "Mountain Time (MST)" },
-          { value: "pst", label: "Pacific Time (PST)" }
-        ]
-      }
-    ]
-  },
   {
     id: "account",
     title: "Account",
@@ -41,16 +15,10 @@ const settingsSections = [
     fields: [
       {
         id: "name",
-        label: "Full Name",
+        label: "User Name",
         type: "text",
-        description: "Your full name displayed in the application"
+        description: "Your username displayed in the application"
       },
-      {
-        id: "email",
-        label: "Email Address",
-        type: "email",
-        description: "Email used for notifications and communications"
-      }
     ]
   },
   {
@@ -76,82 +44,32 @@ const settingsSections = [
         description: "Enable horizontal sidebar navigation"
       }
     ]
-  },
-  {
-    id: "security",
-    title: "Security",
-    description: "Configure security settings",
-    fields: [
-      {
-        id: "2fa",
-        label: "Two-factor Authentication",
-        type: "toggle",
-        description: "Enable two-factor authentication for added security"
-      },
-      {
-        id: "session",
-        label: "Session Timeout",
-        type: "select",
-        description: "Set how long until your session expires due to inactivity",
-        options: [
-          { value: "15", label: "15 minutes" },
-          { value: "30", label: "30 minutes" },
-          { value: "60", label: "1 hour" },
-          { value: "240", label: "4 hours" }
-        ]
-      }
-    ]
-  },
-  {
-    id: "experimental",
-    title: "Experimental",
-    description: "Try out experimental features (may be unstable)",
-    fields: [
-      {
-        id: "betaFeatures",
-        label: "Beta Features",
-        type: "toggle",
-        description: "Enable access to features still in development"
-      },
-      {
-        id: "aiAssistant",
-        label: "AI Domain Analysis",
-        type: "toggle",
-        description: "Use AI to analyze domain security patterns"
-      },
-      {
-        id: "advancedMetrics",
-        label: "Advanced Metrics",
-        type: "toggle",
-        description: "Enable detailed performance and security metrics"
-      }
-    ]
   }
 ];
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
-  const [activeSection, setActiveSection] = useState("general");
+  const [activeSection, setActiveSection] = useState("account");
   const [formState, setFormState] = useState({
-    notifications: true,
-    timezone: "utc",
-    name: "Admin User",
+    name: "",
     email: "admin@example.com",
     theme: "system",
-    "Horizontal Sidebar": isMobile ? true : false,
-    "2fa": false,
-    session: "60",
-    betaFeatures: false,
-    aiAssistant: false,
-    advancedMetrics: false
+    "Horizontal Sidebar": isMobile ? true : false
   });
 
-  // Update form state with current theme when component mounts
+  const { data: users } = useUsers();
+  const createUserMutation = useCreateUser();
+  const updateUsernameMutation = useUpdateUsername();
+
+  // Update form state with current theme and user data when component mounts
   useEffect(() => {
+    const currentUser = userStorage.getCurrentUser();
+    
     setFormState(prev => ({
       ...prev,
-      theme: theme
+      theme: theme,
+      name: currentUser.username || "Admin User"
     }));
 
     // Initialize horizontal sidebar setting from localStorage
@@ -162,7 +80,7 @@ export default function SettingsPage() {
         "Horizontal Sidebar": horizontalSidebarPref === "true"
       }));
     }
-  }, [theme, isMobile]);
+  }, [theme, isMobile, users]);
 
   const handleInputChange = (id: string, value: string | boolean) => {
     setFormState(prev => ({
@@ -189,19 +107,19 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     try {
-      // Save settings to backend via API
-      const response = await fetch('/api/user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formState),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
+      // Update username if changed
+      const currentUser = userStorage.getCurrentUser();
+      if (formState.name !== currentUser.username && currentUser.userId) {
+        // Use PATCH request when user has an ID
+        await updateUsernameMutation.mutateAsync({
+          userId: currentUser.userId,
+          username: formState.name
+        });
+      } else if (formState.name !== currentUser.username) {
+        // Fallback to POST request for new users
+        await createUserMutation.mutateAsync(formState.name);
       }
-
+      
       // Apply theme setting
       if (formState.theme) {
         setTheme(formState.theme as "light" | "dark" | "system");
@@ -249,15 +167,7 @@ export default function SettingsPage() {
                       : "text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
-                  {section.id === "experimental" && (
-                    <FlaskConical size={16} className="mr-2 inline-block" />
-                  )}
                   {section.title}
-                  {section.id === "experimental" && (
-                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 rounded-full">
-                      Beta
-                    </span>
-                  )}
                 </button>
               ))}
             </nav>
@@ -272,15 +182,7 @@ export default function SettingsPage() {
               .map((section) => (
                 <div key={section.id}>
                   <h2 className="text-lg font-medium flex items-center">
-                    {section.id === "experimental" && (
-                      <FlaskConical size={20} className="mr-2 text-amber-500" />
-                    )}
                     {section.title}
-                    {section.id === "experimental" && (
-                      <span className="ml-2 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 rounded-full">
-                        Beta
-                      </span>
-                    )}
                   </h2>
                   <p className="text-muted-foreground text-sm mt-1 mb-6">
                     {section.description}

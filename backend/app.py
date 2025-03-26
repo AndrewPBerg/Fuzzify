@@ -188,21 +188,60 @@ def test_connection():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/user/<user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    """API endpoint to delete a user."""
-    if DEBUG:
-        logger.debug(f"Received request to delete user: {user_id}")
+@app.route('/api/user/<user_id>', methods=['DELETE', 'PATCH'])
+def specific_user_route(user_id):
+    """API endpoint to delete or update a user."""
+    if request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete user: {user_id}")
+            
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            session.delete(user)
+            session.commit()
         
-    with Session(engine) as session:
-        user = session.exec(select(User).where(User.user_id == user_id)).first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-        
-        session.delete(user)
-        session.commit()
+        return jsonify({"message": "User deleted successfully", "user_id": user_id}), 200
     
-    return jsonify({"message": "User deleted successfully", "user_id": user_id}), 200
+    elif request.method == 'PATCH':
+        if DEBUG:
+            logger.debug(f"Received request to update user: {user_id}")
+        
+        data = request.json
+        if not data or 'username' not in data:
+            return jsonify({"error": "Missing username in request body"}), 400
+        
+        new_username = data.get("username")
+        
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            # Check if the new username already exists for another user
+            existing_user = session.exec(
+                select(User).where(
+                    (User.username == new_username) & 
+                    (User.user_id != user_id)
+                )
+            ).first()
+            
+            if existing_user:
+                return jsonify({"error": "Username already taken by another user"}), 409
+            
+            # Update username
+            user.username = new_username
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            
+            return jsonify({
+                "message": "Username updated successfully",
+                "user_id": user_id,
+                "username": user.username
+            }), 200
 
 # Create a new user
 @app.route('/api/user', methods=['POST', 'GET'])
@@ -352,6 +391,7 @@ def permutations_route(user_id, domain_name):
                 return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
             generate_and_store_permutations(domain_name)
+
 
         return jsonify({"message": "Permutations generated and added to database"}), 201
 

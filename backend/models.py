@@ -3,11 +3,19 @@ from typing import Optional
 from datetime import datetime
 from uuid import uuid4
 
+
+
+
+
 class User(SQLModel, table=True):
     __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     username: Optional[str] = Field(default=None) # user name 
-   
+
+# class Settings(SQLModel, table=True):
+#     __tablename__ = "settings"
+#     user_id: str = Field(primary_key=True, foreign_key="user.user_id")
+#     horizontal_sidebar: bool = Field(default=False)
 
 #  Domain Table
 class Domain(SQLModel, table=True):

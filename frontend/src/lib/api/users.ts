@@ -79,6 +79,20 @@ const deleteUser = async (userId: string): Promise<void> => {
   }
 };
 
+const updateUsername = async ({ userId, username }: { userId: string; username: string }): Promise<{ message: string; user_id: string; username: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update username");
+  }
+  return response.json();
+};
+
 // Query hooks
 export function useUsers() {
   return useQuery({
@@ -94,8 +108,10 @@ export function useCreateUser() {
 
   return useMutation({ // so much easier than custom hooks
     mutationFn: createUser,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Store the new username in localStorage
+      userStorage.setCurrentUser(data.username, data.user_id || "");
       toast.success("User created successfully");
     },
     onError: (error) => {
@@ -121,4 +137,24 @@ export function useDeleteUser() {
       });
     },
   });
-} 
+}
+
+export function useUpdateUsername() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: updateUsername,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Update the stored username in localStorage
+      const currentUser = userStorage.getCurrentUser();
+      userStorage.setCurrentUser(data.username, currentUser.userId);
+      toast.success("Username updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Error updating username", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    },
+  });
+}
