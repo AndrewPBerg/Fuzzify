@@ -33,6 +33,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     depends_on:
       backend:
         condition: service_healthy
@@ -40,6 +41,11 @@ services:
       NODE_ENV: "development"
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_API_URL: "http://localhost:10001"
+      # Hot reloading configuration
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      WDS_SOCKET_HOST: "127.0.0.1"
+      WDS_SOCKET_PORT: "10002"
 
   db:
     image: mysql:8.0

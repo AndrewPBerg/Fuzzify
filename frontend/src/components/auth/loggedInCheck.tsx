@@ -30,9 +30,9 @@ export function AuthCheck({ children }: AuthCheckProps) {
   }, [router, pathname]);
 
   // Show a loading indicator instead of null while checking
-  if (isChecking) {
-    return <div className="w-full h-full flex items-center justify-center">Loading...</div>;
-  }
+  // if (isChecking) {
+  //   return <div className="w-full h-full flex items-center justify-center">Loading...</div>;
+  // }
 
   return <>{children}</>;
 } 
