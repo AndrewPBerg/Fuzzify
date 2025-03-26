@@ -38,7 +38,7 @@ const threatIcons = {
   null: <ShieldX className="text-blue-500" size={16} />
 };
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 export function DomainTable() {
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -48,6 +48,7 @@ export function DomainTable() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
@@ -152,19 +153,71 @@ export function DomainTable() {
   });
 
   // Calculate pagination
-  const totalPages = Math.ceil(sortedDomains.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const totalPages = Math.ceil(sortedDomains.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
   const currentPageData = sortedDomains.slice(startIndex, endIndex);
 
-  // Reset to first page when filters change
+  // Reset to first page when filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedDomainRoot]);
+  }, [searchQuery, selectedDomainRoot, itemsPerPage]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+  };
+
+  // Generate page numbers to display with ellipses for long ranges
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5; // Max number of page buttons to show
+
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Always show first page
+      pageNumbers.push(1);
+
+      // Calculate range around current page
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+      // Adjust if at start or end
+      if (currentPage <= 2) {
+        endPage = Math.min(4, totalPages - 1);
+      } else if (currentPage >= totalPages - 1) {
+        startPage = Math.max(2, totalPages - 3);
+      }
+
+      // Add ellipsis after first page if needed
+      if (startPage > 2) {
+        pageNumbers.push('ellipsis-start');
+      }
+
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+
+      // Add ellipsis before last page if needed
+      if (endPage < totalPages - 1) {
+        pageNumbers.push('ellipsis-end');
+      }
+
+      // Always show last page
+      pageNumbers.push(totalPages);
+    }
+
+    return pageNumbers;
   };
 
   // Clear filters
@@ -328,33 +381,51 @@ export function DomainTable() {
       {/* Pagination - only show if we have data */}
       {!loading && !error && domains.length > 0 && (
         <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground">Rows:</span>
+              <select
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+                className="py-1 px-2 text-xs bg-background/50 border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+              >
+                {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <button
               className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
             
             <div className="flex items-center space-x-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={cn(
-                    "w-8 h-8 rounded-md text-sm",
-                    page === currentPage 
-                      ? "bg-primary text-primary-foreground" 
-                      : "border border-border/50 hover:bg-muted/20"
-                  )}
-                >
-                  {page}
-                </button>
+              {getPageNumbers().map((page, index) => (
+                typeof page === 'number' ? (
+                  <button
+                    key={`page-${page}`}
+                    onClick={() => handlePageChange(page)}
+                    className={cn(
+                      "min-w-7 h-7 rounded-md text-xs",
+                      page === currentPage 
+                        ? "bg-primary text-primary-foreground" 
+                        : "border border-border/50 hover:bg-muted/20"
+                    )}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={`ellipsis-${index}`} className="w-7 text-center">…</span>
+                )
               ))}
             </div>
             
@@ -363,7 +434,7 @@ export function DomainTable() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
