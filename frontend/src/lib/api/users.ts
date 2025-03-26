@@ -43,6 +43,15 @@ const createUser = async (username: string): Promise<CreateUserResponse> => {
   return response.json();
 };
 
+const deleteUser = async (userId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/user/${userId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete user");
+  }
+};
+
 // Query hooks
 export function useUsers() {
   return useQuery({
@@ -64,6 +73,23 @@ export function useCreateUser() {
     },
     onError: (error) => {
       toast.error("Error creating user", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User deleted successfully");
+    },
+    onError: (error) => {
+      toast.error("Error deleting user", {
         description: error instanceof Error ? error.message : "Unknown error occurred",
       });
     },

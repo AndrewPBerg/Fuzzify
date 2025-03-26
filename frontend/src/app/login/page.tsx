@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useUsers, useCreateUser } from "@/lib/api/users";
-import { Loader2 } from "lucide-react";
+import { useUsers, useCreateUser, useDeleteUser } from "@/lib/api/users";
+import { Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
@@ -16,6 +16,7 @@ export default function LoginPage() {
 
   const { data: users, isLoading: isLoadingUsers } = useUsers();
   const createUser = useCreateUser();
+  const deleteUser = useDeleteUser();
 
   const handleExistingLogin = async () => {
     // If an existing user is selected, use that
@@ -33,6 +34,16 @@ export default function LoginPage() {
     // otherwise, weird case, console log
     console.log("please select a user");
     return;
+  };
+
+  const handleDeleteUser = (user: { user_id: string, username: string }, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selection of the user when clicking delete
+    if (confirm(`Are you sure you want to delete the user "${user.username}"?`)) {
+      deleteUser.mutate(user.user_id);
+      if (selectedExistingUser === user.username) {
+        setSelectedExistingUser("");
+      }
+    }
   };
 
   if (isLoadingUsers) {
@@ -67,7 +78,22 @@ export default function LoginPage() {
                     setNewUsername(""); // Clear new username when selecting existing user
                   }}
                 >
-                  <div className="font-medium">{user.username}</div>
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">{user.username}</div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 rounded-full" 
+                      onClick={(e) => handleDeleteUser(user, e)}
+                      disabled={deleteUser.isPending}
+                    >
+                      {deleteUser.isPending && deleteUser.variables === user.user_id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

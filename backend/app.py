@@ -187,6 +187,22 @@ def test_connection():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/user/<user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    """API endpoint to delete a user."""
+    if DEBUG:
+        logger.debug(f"Received request to delete user: {user_id}")
+        
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        session.delete(user)
+        session.commit()
+    
+    return jsonify({"message": "User deleted successfully", "user_id": user_id}), 200
+
 # Create a new user
 @app.route('/api/user', methods=['POST', 'GET'])
 def user_route():
