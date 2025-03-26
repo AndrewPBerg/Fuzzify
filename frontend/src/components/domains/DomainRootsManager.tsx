@@ -2,7 +2,6 @@
 
 import { DomainRootForm } from "./DomainRootForm";
 import { DomainRootsList } from "./DomainRootsList";
-import { DomainRootRun } from "./DomainRootRun";
 
 export function DomainRootsManager() {
   return (
@@ -15,11 +14,6 @@ export function DomainRootsManager() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <DomainRootForm />
-          
-          <DomainRootRun 
-            onSuccess={() => window.dispatchEvent(new Event('storage'))} 
-            compact={true}
-          />
         </div>
       </div>
     

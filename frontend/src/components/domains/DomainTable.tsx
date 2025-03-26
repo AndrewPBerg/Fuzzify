@@ -73,15 +73,9 @@ export function DomainTable() {
   // Fetch domain permutations when a domain root is selected
   useEffect(() => {
     if (!selectedDomainRoot) {
-      // Use mock data if no domain root is selected
-      import('./mockDomains').then(module => {
-        setDomains(module.default);
-        setLoading(false);
-      }).catch(err => {
-        console.error('Error loading mock domains:', err);
-        setDomains([]);
-        setLoading(false);
-      });
+      // No domain root selected, just set empty domains and stop loading
+      setDomains([]);
+      setLoading(false);
       return;
     }
 
@@ -102,11 +96,11 @@ export function DomainTable() {
         const transformedData = data.map((item: any, index: number) => ({
           id: index + 1,
           name: item.domain || item.name,
-          ip: item.ip || '192.168.1.1',
-          created: item.created || new Date().toISOString().split('T')[0],
-          owner: item.owner || 'System',
-          status: item.status || 'active',
-          threatLevel: item.threatLevel || 'secure'
+          ip: item.ip,
+          created: item.created,
+          owner: item.owner,
+          status: item.status,
+          threatLevel: item.threatLevel
         }));
         
         setDomains(transformedData);

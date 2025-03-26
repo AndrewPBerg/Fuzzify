@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDomains, useDeleteDomain } from "@/lib/api/domains";
 import { userStorage } from "@/lib/api/users";
@@ -111,15 +111,31 @@ export function DomainRootsList() {
         {domainRoots.map((root) => (
           <li key={root} className="flex items-center justify-between bg-background/50 p-2 rounded-md border border-border/50">
             <span className="text-sm">{root}</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              onClick={() => handleDeleteRoot(root)}
-            >
-              <Trash2 size={14} />
-              <span className="sr-only">Delete</span>
-            </Button>
+            <div className="flex space-x-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                onClick={() => {
+                  toast({ //TODO remove placehold when implemented
+                    title: "Run Placeholder",
+                    description: `Feature to run scan for "${root}" coming soon`,
+                  });
+                }}
+              >
+                <Play size={14} />
+                <span className="sr-only">Run Now</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                onClick={() => handleDeleteRoot(root)}
+              >
+                <Trash2 size={14} />
+                <span className="sr-only">Delete</span>
+              </Button>
+            </div>
           </li>
         ))}
       </ul>
