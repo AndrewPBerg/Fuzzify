@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ReactNode } from "react";
 
@@ -10,24 +10,29 @@ interface AuthCheckProps {
 
 export function AuthCheck({ children }: AuthCheckProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     try {
       const currentUser = localStorage.getItem("currentUser");
-      if (!currentUser) {
+      if (!currentUser && pathname !== "/login") {
         router.push("/login");
       }
     } catch (error) {
       console.error("Auth check error:", error);
-      router.push("/login");
+      if (pathname !== "/login") {
+        router.push("/login");
+      }
     } finally {
       setIsChecking(false);
     }
-  }, [router]);
+  }, [router, pathname]);
 
-  // Don't render children until auth check is complete
-  if (isChecking) return null;
+  // Show a loading indicator instead of null while checking
+  if (isChecking) {
+    return <div className="w-full h-full flex items-center justify-center">Loading...</div>;
+  }
 
   return <>{children}</>;
 } 
