@@ -123,7 +123,7 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild className="text-destructive">
-                <Link href="/login" onClick={() => userStorage.clearCurrentUser()}>
+                <Link href="/login" onClick={() => { localStorage.clear(); }}>
                   <span>Logout</span>
                 </Link>
               </DropdownMenuItem>
@@ -552,7 +552,7 @@ export function Sidebar() {
             <DropdownMenuLabel>{currentUser.username}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-destructive">
-              <Link href="/login" onClick={() => userStorage.clearCurrentUser()}>
+              <Link href="/login" onClick={() => { localStorage.clear(); }}>
                 <span>Logout</span>
               </Link>
             </DropdownMenuItem>
