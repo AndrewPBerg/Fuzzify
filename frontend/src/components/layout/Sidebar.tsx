@@ -31,6 +31,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { toast } from "sonner";
+import { userStorage } from "@/lib/api/users";
 
 // Define Position type
 type Position = {
@@ -60,6 +61,8 @@ const navigation = [
 
 // Horizontal sidebar component
 const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
+  const currentUser = userStorage.getCurrentUser();
+  
   return (
     <>
       {/* Add a spacer div to prevent content from being hidden under the navbar */}
@@ -116,11 +119,11 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
-              <DropdownMenuLabel>{localStorage.getItem("currentUser")}</DropdownMenuLabel>
+              <DropdownMenuLabel>{currentUser.username}</DropdownMenuLabel>
               <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild className="text-destructive">
-                <Link href="/login" onClick={() => localStorage.removeItem("currentUser")}>
+                <Link href="/login" onClick={() => userStorage.clearCurrentUser()}>
                   <span>Logout</span>
                 </Link>
               </DropdownMenuItem>
@@ -197,6 +200,7 @@ export function Sidebar() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ x: number; y: number; startPosition: Position } | null>(null);
   const pathname = usePathname();
+  const currentUser = userStorage.getCurrentUser();
 
   // Check for horizontal sidebar preference
   useEffect(() => {
@@ -545,12 +549,10 @@ export function Sidebar() {
             side={lockPosition === LockPosition.Right ? "left" : "right"} 
             className="w-56 mt-1"
           >
-            <DropdownMenuLabel>{localStorage.getItem("currentUser")}</DropdownMenuLabel> 
-            {/* TODO: Change `My Account` to current user's name */}
-            {/* TODO: also need todo for horizontal sidebar */}
+            <DropdownMenuLabel>{currentUser.username}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-destructive">
-              <Link href="/login" onClick={() => localStorage.removeItem("currentUser")}>
+              <Link href="/login" onClick={() => userStorage.clearCurrentUser()}>
                 <span>Logout</span>
               </Link>
             </DropdownMenuItem>

@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useUsers, useCreateUser, useDeleteUser } from "@/lib/api/users";
+import { useUsers, useCreateUser, useDeleteUser, userStorage } from "@/lib/api/users";
 import { Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [selectedExistingUser, setSelectedExistingUser] = useState(""); // used for selecting existing usernames
+  const [selectedExistingUser, setSelectedExistingUser] = useState<string>(""); // used for selecting existing usernames
+  const [selectedUserId, setSelectedUserId] = useState<string>(""); // store the user_id of the selected user
   const [newUsername, setNewUsername] = useState(""); // used for creating new usernames
   const [isCreating, setIsCreating] = useState(false);
 
@@ -20,13 +21,13 @@ export default function LoginPage() {
 
   const handleExistingLogin = async () => {
     // If an existing user is selected, use that
-    if (selectedExistingUser) {
-      localStorage.setItem("currentUser", selectedExistingUser);
-      try{
-        console.log("currentUser", localStorage.getItem("currentUser"));
+    if (selectedExistingUser && selectedUserId) {
+      userStorage.setCurrentUser(selectedExistingUser, selectedUserId);
+      try {
+        console.log("Logged in user:", userStorage.getCurrentUser());
         router.push("/");
       }
-      catch(error){
+      catch(error) {
         console.error("Error pushing to /", error);
       }
       return;
@@ -41,8 +42,9 @@ export default function LoginPage() {
     if (confirm(`Are you sure you want to delete the user "${user.username}"?`)) {
       deleteUser.mutate(user.user_id);
       if (selectedExistingUser === user.username) {
-        localStorage.removeItem("currentUser"); // Remove from local storage
+        userStorage.clearCurrentUser();
         setSelectedExistingUser("");
+        setSelectedUserId("");
       }
     }
   };
@@ -92,6 +94,7 @@ export default function LoginPage() {
                   }`}
                   onClick={() => {
                     setSelectedExistingUser(user.username);
+                    setSelectedUserId(user.user_id);
                     setNewUsername(""); // Clear new username when selecting existing user
                   }}
                 >
@@ -126,6 +129,7 @@ export default function LoginPage() {
                 onChange={(e) => {
                   setNewUsername(e.target.value);
                   setSelectedExistingUser(""); // Clear selected user when typing new username
+                  setSelectedUserId(""); // Also clear the selected user ID
                 }}
               />
             </div>

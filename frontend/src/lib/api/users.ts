@@ -11,6 +11,32 @@ interface CreateUserResponse {
   username: string;
 }
 
+// Local storage keys
+const USER_STORAGE_KEYS = {
+  CURRENT_USER: "currentUser",
+  USER_ID: "userID"
+};
+
+// User storage functions
+export const userStorage = {
+  setCurrentUser: (username: string, userId: string) => {
+    localStorage.setItem(USER_STORAGE_KEYS.CURRENT_USER, username);
+    localStorage.setItem(USER_STORAGE_KEYS.USER_ID, userId);
+  },
+  
+  clearCurrentUser: () => {
+    localStorage.removeItem(USER_STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(USER_STORAGE_KEYS.USER_ID);
+  },
+  
+  getCurrentUser: () => {
+    return {
+      username: localStorage.getItem(USER_STORAGE_KEYS.CURRENT_USER) || "",
+      userId: localStorage.getItem(USER_STORAGE_KEYS.USER_ID) || ""
+    };
+  }
+};
+
 // API functions
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001';
@@ -18,7 +44,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001'
 const fetchUsers = async (): Promise<User[]> => {
   const response = await fetch(`${API_BASE_URL}/api/user`);
   if (!response.ok) {
-    localStorage.removeItem("currentUser");
+    userStorage.clearCurrentUser();
     throw new Error("Failed to fetch users");
   }
   try {
