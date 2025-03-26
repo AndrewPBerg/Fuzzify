@@ -37,9 +37,9 @@ services:
       backend:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://backend:8000"
       NODE_ENV: "development"
       NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_URL: "http://localhost:10001"
 
   db:
     image: mysql:8.0
