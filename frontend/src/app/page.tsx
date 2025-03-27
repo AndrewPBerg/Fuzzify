@@ -1,15 +1,42 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
 import { Globe, Server, User, Shield, AlertTriangle } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
 
 export default function HomePage() {
+  const router = useRouter();
+  const { currentUser, isLoading } = useUser();
+  const hasRedirected = useRef(false);
+
+  // Redirect to login page if not logged in, but only once
+  useEffect(() => {
+    if (!isLoading && !currentUser && !hasRedirected.current) {
+      hasRedirected.current = true;
+      router.push("/login");
+    }
+  }, [currentUser, isLoading, router]);
+
+  // Show nothing during initial load to avoid flash
+  if (isLoading) {
+    return <div className="page-container">Loading...</div>;
+  }
+
+  // Don't render content if not logged in
+  if (!currentUser) {
+    return null;
+  }
+
   return (
     <div className="page-container">
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
-          Overview of your domain monitoring system
+          Welcome, {currentUser.username}! Here's your domain monitoring overview.
         </p>
       </div>
 

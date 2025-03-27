@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
@@ -33,27 +33,19 @@ export function DomainRootForm() {
   const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!currentUser) {
+      toast.error("Please login first");
+      return;
+    }
+    
+    // Validate domain before submitting
     if (!domainRoot.trim()) {
-      toast.error("Error", {
-        description: "Please enter a domain root",
-      });
+      toast.error("Please enter a domain root");
       return;
     }
-    
+
     if (!isValidDomain(domainRoot)) {
-      toast.error("Error", {
-        description: "Please enter a valid domain (e.g., example.com)",
-      });
-      return;
-    }
-    
-    // Check if domain already exists in local storage
-    const existingRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    
-    if (existingRoots.includes(domainRoot)) {
-      toast.error("Error", {
-        description: "This domain root already exists",
-      });
+      toast.error("Please enter a valid domain root");
       return;
     }
     
