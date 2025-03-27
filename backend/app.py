@@ -35,7 +35,30 @@ DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password@db:3306
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
-engine = create_engine(DATABASE_URL)
+# Add connection retry
+max_retries = 5
+retry_delay = 5  # seconds
+retries = 0
+
+while retries < max_retries:
+    try:
+        logger.info(f"Attempt {retries + 1}/{max_retries} to connect to database...")
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        # Test connection
+        with engine.connect() as conn:
+            logger.info("Database connection successful!")
+            break
+    except Exception as e:
+        retries += 1
+        logger.error(f"Database connection failed: {e}")
+        if retries < max_retries:
+            logger.info(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        else:
+            logger.error("Max retries reached. Could not connect to database.")
+            # Continue execution and let app fail later if needed
+            engine = create_engine(DATABASE_URL)
+            break
 
 # Ensure Database Schema Exists
 def create_db_and_tables():
@@ -188,10 +211,26 @@ def test_connection():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/user/<user_id>', methods=['DELETE', 'PATCH'])
+@app.route('/api/user/<user_id>', methods=['DELETE', 'PATCH', 'GET'])
 def specific_user_route(user_id):
-    """API endpoint to delete or update a user."""
-    if request.method == 'DELETE':
+    """API endpoint to delete, update, or get a user."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to get user: {user_id}")
+            
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            return jsonify({
+                "user_id": user.user_id,
+                "username": user.username,
+                "horizontal_sidebar": user.horizontal_sidebar,
+                "theme": user.theme
+            }), 200
+    
+    elif request.method == 'DELETE':
         if DEBUG:
             logger.debug(f"Received request to delete user: {user_id}")
             
@@ -210,37 +249,54 @@ def specific_user_route(user_id):
             logger.debug(f"Received request to update user: {user_id}")
         
         data = request.json
-        if not data or 'username' not in data:
-            return jsonify({"error": "Missing username in request body"}), 400
+        if not data:
+            return jsonify({"error": "Missing data in request body"}), 400
         
-        new_username = data.get("username")
+        # Check if at least one field to update is provided
+        if not any(key in data for key in ['username', 'horizontal_sidebar', 'theme']):
+            return jsonify({"error": "At least one of username, horizontal_sidebar, or theme must be provided"}), 400
         
         with Session(engine) as session:
             user = session.exec(select(User).where(User.user_id == user_id)).first()
             if not user:
                 return jsonify({"error": "User not found"}), 404
             
-            # Check if the new username already exists for another user
-            existing_user = session.exec(
-                select(User).where(
-                    (User.username == new_username) & 
-                    (User.user_id != user_id)
-                )
-            ).first()
+            # Handle username update if provided
+            if 'username' in data:
+                new_username = data.get("username")
+                
+                # Check if the new username already exists for another user
+                existing_user = session.exec(
+                    select(User).where(
+                        (User.username == new_username) & 
+                        (User.user_id != user_id)
+                    )
+                ).first()
+                
+                if existing_user:
+                    return jsonify({"error": "Username already taken by another user"}), 409
+                
+                # Update username
+                user.username = new_username
             
-            if existing_user:
-                return jsonify({"error": "Username already taken by another user"}), 409
+            # Update horizontal_sidebar if provided
+            if 'horizontal_sidebar' in data:
+                user.horizontal_sidebar = data.get("horizontal_sidebar")
             
-            # Update username
-            user.username = new_username
+            # Update theme if provided
+            if 'theme' in data:
+                user.theme = data.get("theme")
+                
             session.add(user)
             session.commit()
             session.refresh(user)
             
             return jsonify({
-                "message": "Username updated successfully",
+                "message": "User updated successfully",
                 "user_id": user_id,
-                "username": user.username
+                "username": user.username,
+                "horizontal_sidebar": user.horizontal_sidebar,
+                "theme": user.theme
             }), 200
 
 # Create a new user
@@ -271,14 +327,22 @@ def user_route():
         existing_user = session.exec(select(User).where(User.username == username)).first()
         
         if existing_user:
-            return jsonify({"message": "User already exists", "username": existing_user.username}), 200
+            return jsonify({
+                "message": "User already exists", 
+                "username": existing_user.username,
+                "user_id": existing_user.user_id
+            }), 200
         
         new_user = User(username=username)
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
 
-    return jsonify({"message": "User created successfully", "username": new_user.username}), 201
+    return jsonify({
+        "message": "User created successfully", 
+        "username": new_user.username,
+        "user_id": new_user.user_id
+    }), 201
 
 @app.route('/api/<user_id>/domain', methods=['POST', 'GET', 'DELETE'])
 def domain_route(user_id):
@@ -406,6 +470,7 @@ def permutations_route(user_id, domain_name):
             return jsonify({"message": "No permutations found for this domain."}), 404
 
         return jsonify([perm.model_dump() for perm in permutations])
+
 
 # ------------------------- Startup Sequence -------------------------
 

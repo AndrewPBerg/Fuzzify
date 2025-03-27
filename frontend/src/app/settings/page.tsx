@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
-import { userStorage, useUsers, useCreateUser, useUpdateUsername } from "@/lib/api/users";
+import { userStorage, useUsers, useCreateUser, useUpdateUserSettings } from "@/lib/api/users";
 
 // Define settings sections and fields
 const settingsSections = [
@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
   const { data: users } = useUsers();
   const createUserMutation = useCreateUser();
-  const updateUsernameMutation = useUpdateUsername();
+  const updateUserSettingsMutation = useUpdateUserSettings();
 
   // Update form state with current theme and user data when component mounts
   useEffect(() => {
@@ -107,21 +107,31 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     try {
-      // Update username if changed
       const currentUser = userStorage.getCurrentUser();
       let updatedUsername = formState.name;
       
-      if (formState.name !== currentUser.username && currentUser.userId) {
-        // Use PATCH request when user has an ID
-        const result = await updateUsernameMutation.mutateAsync({
+      if (currentUser.userId) {
+        // User exists, update all settings with one call
+        const result = await updateUserSettingsMutation.mutateAsync({
           userId: currentUser.userId,
-          username: formState.name
+          username: formState.name,
+          theme: formState.theme,
+          horizontal_sidebar: formState["Horizontal Sidebar"]
         });
         updatedUsername = result.username;
-      } else if (formState.name !== currentUser.username) {
-        // Fallback to POST request for new users
+      } else if (formState.name) {
+        // New user, create first
         const result = await createUserMutation.mutateAsync(formState.name);
         updatedUsername = result.username;
+        
+        // Then update settings if we have a user ID after creation
+        if (result.user_id) {
+          await updateUserSettingsMutation.mutateAsync({
+            userId: result.user_id,
+            theme: formState.theme,
+            horizontal_sidebar: formState["Horizontal Sidebar"]
+          });
+        }
       }
       
       // Apply theme setting

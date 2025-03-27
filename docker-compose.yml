@@ -23,6 +23,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15s
+    networks:
+      - app-network
 
   frontend:
     build:
@@ -46,6 +48,8 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       WDS_SOCKET_HOST: "127.0.0.1"
       WDS_SOCKET_PORT: "10002"
+    networks:
+      - app-network
 
   db:
     image: mysql:8.0
@@ -65,6 +69,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - app-network
 
   pubsub:
     image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
@@ -72,6 +78,12 @@ services:
     command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
     ports:
       - "8085:8085"
+    networks:
+      - app-network
 
 volumes:
   mysql_data:
+
+networks:
+  app-network:
+    driver: bridge

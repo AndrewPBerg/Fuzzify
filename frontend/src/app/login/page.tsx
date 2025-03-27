@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUsers, useCreateUser, useDeleteUser, userStorage } from "@/lib/api/users";
+import { useTheme } from "@/components/ui/ThemeProvider";
 import { Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedExistingUser, setSelectedExistingUser] = useState<string>(""); // used for selecting existing usernames
   const [selectedUserId, setSelectedUserId] = useState<string>(""); // store the user_id of the selected user
@@ -35,16 +37,59 @@ export default function LoginPage() {
     }
   }, [shouldFocusInput]);
 
+  // Set theme to light for login page only, without saving to localStorage
+  useEffect(() => {
+    // Get the current theme from localStorage to restore later
+    const savedTheme = localStorage.getItem('ui-theme');
+    
+    // Set theme to light for login page only
+    setTheme("light");
+    
+    // Return cleanup function to restore original theme on unmount
+    return () => {
+      // We don't want to restore on unmount as the user might have just logged in
+      // The user settings will handle theme restoration on login
+    };
+  }, [setTheme]);
+
   const handleExistingLogin = async () => {
     // If an existing user is selected, use that
     if (selectedExistingUser && selectedUserId) {
-      userStorage.setCurrentUser(selectedExistingUser, selectedUserId);
       try {
+        // First store the user info
+        userStorage.setCurrentUser(selectedExistingUser, selectedUserId);
+        
+        // Fetch user settings
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001'}/api/user/${selectedUserId}`);
+        if (response.ok) {
+          const userSettings = await response.json();
+          
+          // Store theme in localStorage directly to avoid temporary theme issues
+          if (userSettings.theme) {
+            localStorage.setItem('ui-theme', userSettings.theme);
+            // Now apply the theme
+            setTheme(userSettings.theme as "light" | "dark" | "system");
+          }
+          
+          // Apply horizontal sidebar setting
+          if (typeof userSettings.horizontal_sidebar === 'boolean') {
+            localStorage.setItem('horizontalSidebar', String(userSettings.horizontal_sidebar));
+            // Dispatch event to notify components
+            window.dispatchEvent(new CustomEvent('horizontalSidebarChange', {
+              detail: { enabled: userSettings.horizontal_sidebar }
+            }));
+          }
+          
+          console.log("Applied user settings:", userSettings);
+        }
+        
         console.log("Logged in user:", userStorage.getCurrentUser());
+        
+        // Navigate to dashboard AFTER applying settings
         router.push("/");
       }
       catch(error) {
-        console.error("Error pushing to /", error);
+        console.error("Error during login:", error);
       }
       return;
     }
@@ -58,18 +103,20 @@ export default function LoginPage() {
     
     // Check if this is the selected user and reset selection if it is
     if (selectedExistingUser === user.username) {
-      userStorage.clearCurrentUser();
+      userStorage.logout(); // Use logout instead of clearCurrentUser
       setSelectedExistingUser("");
       setSelectedUserId("");
+      // Don't modify theme - respect user preferences
     }
     
     // Handle the deletion without confirmation
     deleteUser.mutate(user.user_id, {
       onSuccess: () => {
         // Always clear userStorage after deletion
-        userStorage.clearCurrentUser();
+        userStorage.logout(); // Use logout instead of clearCurrentUser
         setSelectedExistingUser("");
         setSelectedUserId("");
+        // Don't modify theme - respect user preferences
         
         // Force re-render after successful deletion
         setRefreshKey(prev => prev + 1);
@@ -94,8 +141,50 @@ export default function LoginPage() {
     
     setIsCreating(true);
     try {
-      await createUser.mutateAsync(newUsername);
+      const result = await createUser.mutateAsync(newUsername);
+      
+      // Set default theme and sidebar settings for new user
+      if (result.user_id) {
+        const defaultSettings = {
+          userId: result.user_id,
+          theme: 'system' as const,
+          horizontal_sidebar: window.innerWidth < 768 // Mobile default is true, desktop is false
+        };
+        
+        // Save default settings to server
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001'}/api/user/${result.user_id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              theme: defaultSettings.theme,
+              horizontal_sidebar: defaultSettings.horizontal_sidebar
+            })
+          }
+        );
+        
+        if (response.ok) {
+          // Store theme in localStorage directly
+          localStorage.setItem('ui-theme', defaultSettings.theme);
+          // Apply settings client-side
+          setTheme(defaultSettings.theme);
+          localStorage.setItem('horizontalSidebar', String(defaultSettings.horizontal_sidebar));
+          
+          // Trigger sidebar update
+          window.dispatchEvent(new CustomEvent('horizontalSidebarChange', {
+            detail: { enabled: defaultSettings.horizontal_sidebar }
+          }));
+          
+          console.log("Set default settings for new user");
+        }
+      }
+      
       setNewUsername(""); // Clear input after successful creation
+      // Navigate to dashboard after creating user
+      router.push("/");
     } catch (error) {
       console.error("Error creating user:", error);
     } finally {

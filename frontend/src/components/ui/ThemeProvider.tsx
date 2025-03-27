@@ -30,15 +30,48 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [mounted, setMounted] = useState(false);
+  const [isLoginPage, setIsLoginPage] = useState(false);
+  
+  // Check if we're on the login page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Check if we're on the login page
+      const isOnLoginPage = window.location.pathname === '/login';
+      setIsLoginPage(isOnLoginPage);
+      
+      // When navigating away from login page, re-read theme from localStorage
+      // This ensures theme applied during login is respected
+      if (!isOnLoginPage && mounted) {
+        const savedTheme = localStorage.getItem(storageKey) as Theme;
+        if (savedTheme) {
+          setTheme(savedTheme);
+        }
+      }
+    }
+  }, [mounted, storageKey]);
   
   // Once mounted on client, we can use localStorage
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem(storageKey) as Theme;
+    // Always load from localStorage if available, regardless of page
     if (savedTheme) {
       setTheme(savedTheme);
     }
-  }, [storageKey]);
+    
+    // Add listener for storage changes to sync theme across tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === storageKey && e.newValue) {
+        setTheme(e.newValue as Theme);
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+    
+    // We no longer need to listen for theme change events that force light mode
+    // instead, we'll use the normal theme setting mechanism via setTheme
+  }, [storageKey, setTheme]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -77,6 +110,7 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
+      // Save to localStorage regardless of page
       if (mounted) {
         localStorage.setItem(storageKey, theme);
       }
