@@ -27,13 +27,11 @@ def generate_and_store_permutations(domain):
     with Session(engine) as session:
         print("✅ Connected to:", engine.url)
 
-        # Check if a user exists, create one if not
+         # Check if a user exists
         user = session.exec(select(User)).first()
         if not user:
-            user = User()  
-            session.add(user)
-            session.commit()
-            print(f"Created user: {user.user_id}")
+            print("❌ No user found. Please create a user before running this function.")
+            return
         else:
             print(f"✅ Using existing user: {user.user_id}")
 

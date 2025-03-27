@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 from uuid import uuid4
 
+# User Table 
 class User(SQLModel, table=True):
     __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
@@ -28,3 +29,39 @@ class Permutation(SQLModel, table=True):
     mail_server: Optional[str] = Field(default=None)  # Mail server for variation
     risk: Optional[bool] = Field(default=None)  # High risk? True/False
     ip_address: Optional[str] = Field(default=None)  # Associated IP address
+
+
+# Settings Tables
+class GeneralSettings(SQLModel, table=True):
+    __tablename__ = "general_settings"
+    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
+    email_notifications: bool = Field(default=True)  # Whether notifications are enabled
+    timezone: Optional[str] = Field(default="UTC")  # Stored timezone (e.g., "UTC", "America/New_York")
+
+
+class SecuritySettings(SQLModel, table=True):
+    __tablename__ = "security_settings"
+    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
+    two_factor_auth: bool = Field(default=False)
+    session_timeout: Optional[str] = Field(default="1 hour")
+
+class AppearanceSettings(SQLModel, table=True):
+    __tablename__ = "appearance_settings"
+    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
+    theme: Optional[str] = Field(default="Light")  # "Light" or "Dark"
+    horizontal_sidebar: bool = Field(default=False)
+
+
+class AccountSettings(SQLModel, table=True):
+    __tablename__ = "account_settings"
+    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
+    full_name: Optional[str] = Field(default=None)
+    email_address: Optional[str] = Field(default=None)
+
+
+class ExperimentalSettings(SQLModel, table=True):
+    __tablename__ = "experimental_settings"
+    user_id: str = Field(foreign_key="user.user_id", primary_key=True)
+    beta_features: bool = Field(default=False)
+    ai_domain_analysis: bool = Field(default=False)
+    advanced_metrics: bool = Field(default=False)
