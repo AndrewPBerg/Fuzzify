@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useDomains } from "@/hooks/useDomains";
-import { useUser } from "@/contexts/UserContext";
-import { triggerDomainUpdate } from "./DomainRootsList";
+import { useCreateDomain } from "@/lib/api/domains";
+import { userStorage } from "@/lib/api/users";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -29,9 +28,8 @@ const isValidDomain = (domain: string): boolean => {
 
 export function DomainRootForm() {
   const [domainRoot, setDomainRoot] = useState("");
-  const { currentUser } = useUser();
-  const { addDomain, isLoading: isSubmitting } = useDomains();
-  
+  const createDomainMutation = useCreateDomain();
+
   const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -50,26 +48,21 @@ export function DomainRootForm() {
       toast.error("Please enter a valid domain root");
       return;
     }
-
-    try {
-      const result = await addDomain(domainRoot.trim());
-      
-      if (result?.success) {
-        if (result.isDuplicate) {
-          toast.warning(`Domain "${domainRoot}" already exists`);
-        } else {
-          toast.success("Domain root added successfully");
-          // Trigger domain update event to refresh lists
-          triggerDomainUpdate();
+    
+    const currentUser = userStorage.getCurrentUser();
+    
+    // Use the mutation from domains.ts
+    createDomainMutation.mutate(
+      { 
+        userId: currentUser.userId, 
+        domain_name: domainRoot 
+      },
+      {
+        onSuccess: () => {
+          setDomainRoot("");
         }
-        setDomainRoot(""); // Clear the input
-      } else {
-        throw new Error(result?.error ? String(result.error) : "Unknown error");
       }
-    } catch (error) {
-      console.error('Error adding domain root:', error);
-      toast.error(error instanceof Error ? error.message : "Failed to add domain root. Please try again.");
-    }
+    );
   };
 
   return (
@@ -80,16 +73,16 @@ export function DomainRootForm() {
         value={domainRoot}
         onChange={(e) => setDomainRoot(e.target.value)}
         className="max-w-xs bg-background/50"
-        disabled={isSubmitting}
+        disabled={createDomainMutation.isPending}
       />
       <Button 
         type="submit" 
         size="sm" 
         className="flex items-center gap-1"
-        disabled={isSubmitting}
+        disabled={createDomainMutation.isPending}
       >
         <Plus size={16} />
-        <span>{isSubmitting ? "Adding..." : "Add Root"}</span>
+        <span>{createDomainMutation.isPending ? "Adding..." : "Add Root"}</span>
       </Button>
     </form>
   );

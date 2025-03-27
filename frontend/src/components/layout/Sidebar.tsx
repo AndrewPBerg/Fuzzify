@@ -31,6 +31,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { toast } from "sonner";
+import { userStorage } from "@/lib/api/users";
 
 // Define Position type
 type Position = {
@@ -56,8 +57,33 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+
+
 // Horizontal sidebar component
 const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
+  const [username, setUsername] = useState(() => {
+    return userStorage.getCurrentUser().username || "User";
+  });
+  
+  useEffect(() => {
+    // Update username when localStorage changes
+    const handleStorageChange = () => {
+      const currentUser = userStorage.getCurrentUser();
+      setUsername(currentUser.username || "User");
+    };
+    
+    // Listen for storage events
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Custom event for direct updates from within the app
+    window.addEventListener("userUpdate", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userUpdate", handleStorageChange);
+    };
+  }, []);
+  
   return (
     <>
       {/* Add a spacer div to prevent content from being hidden under the navbar */}
@@ -106,7 +132,24 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
 
         <div className="flex items-center gap-2 shrink-0 ml-2">
           <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
-          <UserNav />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted">
+                <User className="h-4.5 w-4.5 text-muted-foreground" />
+                <span className="sr-only">Account menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
+              <DropdownMenuLabel>{username}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem asChild className="text-destructive">
+                <Link href="/login" onClick={() => { localStorage.clear(); }}>
+                  <span>Logout</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </>
@@ -165,6 +208,9 @@ export function Sidebar() {
   const [useHorizontalSidebar, setUseHorizontalSidebar] = useState(false);
   const [lockPosition, setLockPosition] = useState<LockPosition>(LockPosition.Left);
   const [isSnapping, setIsSnapping] = useState(false);
+  const [username, setUsername] = useState(() => {
+    return userStorage.getCurrentUser().username || "User";
+  });
   const [position, setPosition] = useState<Position>(() => {
     // Initialize position from localStorage or default to left edge
     if (typeof window !== "undefined") {
@@ -178,6 +224,26 @@ export function Sidebar() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ x: number; y: number; startPosition: Position } | null>(null);
   const pathname = usePathname();
+  const currentUser = userStorage.getCurrentUser();
+
+  // Update username when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentUser = userStorage.getCurrentUser();
+      setUsername(currentUser.username || "User");
+    };
+    
+    // Listen for storage events (cross-tab communication)
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Custom event for direct updates from within the app
+    window.addEventListener("userUpdate", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("userUpdate", handleStorageChange);
+    };
+  }, []);
 
   // Check for horizontal sidebar preference
   useEffect(() => {
@@ -512,10 +578,29 @@ export function Sidebar() {
         >
           <GripHorizontal className="h-4 w-4 text-muted-foreground/50" />
         </div>
-        
-        <div className="flex justify-center mt-4 mb-4">
-          <UserNav />
-        </div>
+
+        {/* Account dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted cursor-pointer">
+              <User className="h-4.5 w-4.5 text-muted-foreground" />
+              <span className="sr-only">Account menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent 
+            align={lockPosition === LockPosition.Right ? "end" : "start"} 
+            side={lockPosition === LockPosition.Right ? "left" : "right"} 
+            className="w-56 mt-1"
+          >
+            <DropdownMenuLabel>{username}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="text-destructive">
+              <Link href="/login" onClick={() => { localStorage.clear(); }}>
+                <span>Logout</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <NavigationItems pathname={pathname} isCollapsed={isCollapsed} />
         

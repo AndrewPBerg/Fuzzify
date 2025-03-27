@@ -2,147 +2,115 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { useDomains } from "@/hooks/useDomains";
-import { useUser } from "@/contexts/UserContext";
-
-interface Domain {
-  domain_name: string;
-  user_id?: string;
-  username?: string;
-  total_scans?: number;
-}
-
-// Custom event name for domain updates
-const DOMAIN_UPDATED_EVENT = "domain-list-updated";
-
-// Helper function to trigger domain update events
-export const triggerDomainUpdate = () => {
-  window.dispatchEvent(new Event(DOMAIN_UPDATED_EVENT));
-};
+import { Trash2, Loader2, Play } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useDomains, useDeleteDomain } from "@/lib/api/domains";
+import { userStorage } from "@/lib/api/users";
+import { useGeneratePermutations } from "@/lib/api/permuatations";
 
 export function DomainRootsList() {
-  const { currentUser } = useUser();
-  const { domains, isLoading, error, fetchDomains, deleteDomain } = useDomains();
+  const [domainRoots, setDomainRoots] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const { userId } = userStorage.getCurrentUser();
+  const { data: domainData, isLoading: isLoadingDomains, refetch } = useDomains(userId);
+  const deleteDomainMutation = useDeleteDomain();
+  const generatePermutationsMutation = useGeneratePermutations();
 
+  // Initial data load - prioritize API data on page load/reload
   useEffect(() => {
-    // Log that we're fetching domains
-    console.log("DomainRootsList: Fetching domains for user", currentUser?.user_id);
-    
-    // Force a fresh fetch whenever the component mounts
-    if (currentUser) {
-      fetchDomains();
+    const loadDomains = async () => {
+      setIsLoading(true);
       
-      // Timeout safety to prevent infinite loading state
-      const timeoutId = setTimeout(() => {
-        if (isLoading) {
-          console.warn("DomainRootsList: Loading timeout triggered - resetting loading state");
-          // This will force the component to render the empty state instead of loading indefinitely
-          triggerDomainUpdate();
+      if (userId) {
+        // Always try to fetch fresh data from the API first on initial load
+        try {
+          const result = await refetch();
+          if (result.data) {
+            const apiDomainRoots = result.data.map(domain => domain.domain_name);
+            setDomainRoots(apiDomainRoots);
+            // Update localStorage with fresh API data
+            localStorage.setItem("domainRoots", JSON.stringify(apiDomainRoots));
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error fetching domains:", error);
+          // Continue to fallback to localStorage if API request fails
         }
-      }, 5000); // 5 second timeout
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [currentUser, fetchDomains, isLoading]);
-  
-  // Listen for domain update events
-  useEffect(() => {
-    const handleDomainUpdate = () => {
-      console.log("DomainRootsList: Detected domain update event, refreshing...");
-      fetchDomains();
-    };
-    
-    // Listen for custom domain update events
-    window.addEventListener(DOMAIN_UPDATED_EVENT, handleDomainUpdate);
-    
-    // Also listen for storage events (for backward compatibility)
-    window.addEventListener("storage", handleDomainUpdate);
-    
-    return () => {
-      window.removeEventListener(DOMAIN_UPDATED_EVENT, handleDomainUpdate);
-      window.removeEventListener("storage", handleDomainUpdate);
-    };
-  }, [fetchDomains]);
-
-  // Debug the domains data structure
-  useEffect(() => {
-    console.log("DomainRootsList: Raw domains data:", domains);
-    console.log("DomainRootsList: Type of domains:", typeof domains);
-    console.log("DomainRootsList: Is array?", Array.isArray(domains));
-    console.log("DomainRootsList: Length:", domains?.length);
-  }, [domains]);
-
-  const handleDeleteDomain = async (domainName: string) => {
-    console.log(`DomainRootsList: Attempting to delete domain: ${domainName}`);
-    
-    if (!currentUser) {
-      console.error("DomainRootsList: Cannot delete domain - no user logged in");
-      toast.error("Please login to delete domains");
-      return;
-    }
-    
-    try {
-      // Show deletion in progress toast
-      toast.loading(`Deleting domain ${domainName}...`, {
-        id: `delete-${domainName}`, // Use ID to update this toast later
-      });
-      
-      // Attempt to delete through the hook
-      const success = await deleteDomain(domainName);
-      
-      if (success) {
-        console.log(`DomainRootsList: Successfully deleted domain: ${domainName}`);
-        
-        toast.success(`Domain "${domainName}" has been removed`, {
-          id: `delete-${domainName}`, // Update the loading toast
-        });
-        
-        // Trigger event to update other components
-        triggerDomainUpdate();
-      } else {
-        toast.error(`Failed to delete "${domainName}"`, {
-          id: `delete-${domainName}`, // Update the loading toast
-        });
-        throw new Error("Failed to delete domain");
       }
-    } catch (err) {
-      console.error("DomainRootsList: Error deleting domain:", err);
       
-      // Show error toast (if one isn't already showing)
-      toast.error(`Error: ${err instanceof Error ? err.message : "Unknown error"}`, {
-        id: `delete-${domainName}`,
-      });
-      
-      // Force refresh list to ensure UI is in sync
-      setTimeout(() => {
-        fetchDomains();
-      }, 1000);
+      // Fallback to localStorage if API request fails or there's no userId
+      const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+      setDomainRoots(storedRoots);
+      setIsLoading(false);
+    };
+    
+    loadDomains();
+  }, [userId, refetch]);
+  
+  // Handle storage events and loading state updates
+  useEffect(() => {
+    // Update from localStorage when it changes in other tabs/components
+    const handleStorageChange = () => {
+      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+      setDomainRoots(updatedRoots);
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const handleDeleteRoot = async (root: string) => {
+    try {
+      // Delete from API first
+      if (userId) {
+        await deleteDomainMutation.mutateAsync({
+          userId,
+          domain_name: root
+        });
+      } else {
+        // If no userId (shouldn't happen), just update localStorage
+        const updatedRoots = domainRoots.filter(item => item !== root);
+        localStorage.setItem("domainRoots", JSON.stringify(updatedRoots));
+        setDomainRoots(updatedRoots);
+        
+        toast({
+          title: "Deleted",
+          description: `Domain root "${root}" has been removed`,
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting domain:", error);
+      // toast({
+      //   title: "Error",
+      //   description: `Failed to delete domain "${root}". Please try again.`,
+      //   variant: "destructive"
+      // });
     }
   };
 
-  // Render loading state
-  if (isLoading) {
+  const handleGeneratePermutations = async (domainName: string) => {
+    try {
+      await generatePermutationsMutation.mutateAsync({
+        userId,
+        domainName
+      });
+    } catch (error) {
+      // Error handling is already done in the mutation hook
+      console.error("Error generating permutations:", error);
+    }
+  };
+
+  if (isLoading || isLoadingDomains) {
     return (
-      <div className="text-sm text-muted-foreground mt-4">
-        Loading domain roots...
+      <div className="flex items-center justify-center mt-4 h-10">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // Render error state
-  if (error) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-destructive mt-4">
-        <AlertCircle size={16} />
-        <span>Error loading domains: {error}</span>
-      </div>
-    );
-  }
-
-  // Render empty state
-  if (!domains || !Array.isArray(domains) || domains.length === 0) {
+  if (domainRoots.length === 0) {
     return (
       <div className="text-sm text-muted-foreground italic mt-4">
         No domain roots added yet. Add one above to get started.
@@ -158,29 +126,36 @@ export function DomainRootsList() {
     <div className="mt-4 space-y-2">
       <h3 className="text-sm font-medium">Saved Domain Roots ({domains.length})</h3>
       <ul className="space-y-2">
-        {domains.map((domain, index) => {
-          const domainName = typeof domain === 'string' ? domain : domain.domain_name;
-          
-          if (!domainName) {
-            console.error("DomainRootsList: Invalid domain entry:", domain);
-            return null;
-          }
-          
-          return (
-            <li key={`${domainName}-${index}`} className="flex items-center justify-between bg-background/50 p-2 rounded-md border border-border/50">
-              <span className="text-sm">{domainName}</span>
+        {domainRoots.map((root) => (
+          <li key={root} className="flex items-center justify-between bg-background/50 p-2 rounded-md border border-border/50">
+            <span className="text-sm">{root}</span>
+            <div className="flex space-x-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                onClick={() => handleGeneratePermutations(root)}
+                disabled={generatePermutationsMutation.isPending}
+              >
+                {generatePermutationsMutation.isPending && generatePermutationsMutation.variables?.domainName === root ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Play size={14} />
+                )}
+                <span className="sr-only">Run Now</span>
+              </Button>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                onClick={() => handleDeleteDomain(domainName)}
+                onClick={() => handleDeleteRoot(root)}
               >
                 <Trash2 size={14} />
                 <span className="sr-only">Delete</span>
               </Button>
-            </li>
-          );
-        })}
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );
