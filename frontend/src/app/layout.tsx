@@ -21,28 +21,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Inline script to prevent theme flash */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                // Get saved theme from localStorage
-                const savedTheme = localStorage.getItem('ui-theme');
-                
-                // If the user has explicitly set a theme, apply it immediately
-                if (savedTheme === 'dark') {
-                  document.documentElement.classList.add('dark');
-                } else if (savedTheme === 'system') {
-                  // Check system preference
-                  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  if (systemPrefersDark) {
-                    document.documentElement.classList.add('dark');
-                  }
-                }
-              })();
-            `,
-          }}
-        />
       </head>
       <body className="overflow-x-hidden">
         <QueryProvider>

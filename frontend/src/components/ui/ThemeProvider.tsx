@@ -32,7 +32,7 @@ export function ThemeProvider({
   const [mounted, setMounted] = useState(false);
   const [isLoginPage, setIsLoginPage] = useState(false);
   
-  // Check if we're on the login page
+  // // Check if we're on the login page
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Check if we're on the login page
