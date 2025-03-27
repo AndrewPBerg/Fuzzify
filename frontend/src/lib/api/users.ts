@@ -49,7 +49,7 @@ export const userStorage = {
     localStorage.removeItem(USER_STORAGE_KEYS.USER_ID);
     
     // Don't change the theme - respect user preference
-    localStorage.removeItem('ui-theme');
+    // localStorage.setItem('ui-theme', 'light');
     
     // Dispatch events to notify components
     window.dispatchEvent(new CustomEvent("userUpdate"));
