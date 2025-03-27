@@ -454,7 +454,42 @@ def permutations_route(user_id, domain_name):
             if not user:
                 return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
-            generate_and_store_permutations(domain_name)
+            # Check if domain exists; add it if it doesn't
+            domain_obj = session.get(Domain, domain_name)
+            if not domain_obj:
+                domain_obj = Domain(domain_name=domain_name, user_id=user.user_id)
+                session.add(domain_obj)
+                session.commit()
+                logger.debug(f"Added new domain: {domain_name}")
+
+            # Call dnstwist to generate permutations
+            try:
+                result = subprocess.run(
+                    ["python", "-m", "dnstwist", "--format", "json", domain_name],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                generated_permutations = json.loads(result.stdout)
+            except Exception as e:
+                logger.error(f" Error running dnstwist: {e}")
+                return jsonify({"error": "Failed to generate permutations."}), 500
+
+            # Store permutations
+            for entry in generated_permutations:
+                perm = Permutation(
+                    permutation_name=entry['domain'],
+                    domain_name=domain_name,
+                    server=entry.get('http'),
+                    mail_server=entry.get('mx'),
+                    risk=None,
+                    ip_address=', '.join(entry.get('dns_a', [])) if isinstance(entry.get('dns_a'), list) else entry.get('dns_a')
+                )
+                session.add(perm)
+
+            session.commit()
+
+        return jsonify({"message": "Permutations generated and added to database"}), 201
 
 
         return jsonify({"message": "Permutations generated and added to database"}), 201
