@@ -6,12 +6,12 @@ import {
   Globe, 
   Settings,
   Clock,
-  User,
   ChevronsLeft,
   ChevronsRight,
   GripHorizontal
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { UserNav } from "./UserNav";
 import { cn } from "@/lib/utils";
 import { 
   DropdownMenu,
@@ -603,23 +603,10 @@ export function Sidebar() {
         </DropdownMenu>
 
         <NavigationItems pathname={pathname} isCollapsed={isCollapsed} />
-
-        {/* Theme toggle */}
-        {!isCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent 
-              side={lockPosition === LockPosition.Right ? "left" : "right"} 
-              sideOffset={8}
-            >
-              <span>Toggle Theme</span>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        
+        <div className="mt-auto flex justify-center">
+          <ThemeToggle className="p-2.5 h-9 w-9 mb-4 rounded-full bg-muted/50 hover:bg-muted" />
+        </div>
 
         {/* Collapse toggle button */}
         <Tooltip>
