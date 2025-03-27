@@ -37,8 +37,20 @@ export default function LoginPage() {
     }
   }, [shouldFocusInput]);
 
-  // Always set theme to light for login page
-
+  // Set theme to light for login page only, without saving to localStorage
+  useEffect(() => {
+    // Get the current theme from localStorage to restore later
+    const savedTheme = localStorage.getItem('ui-theme');
+    
+    // Set theme to light for login page only
+    setTheme("light");
+    
+    // Return cleanup function to restore original theme on unmount
+    return () => {
+      // We don't want to restore on unmount as the user might have just logged in
+      // The user settings will handle theme restoration on login
+    };
+  }, [setTheme]);
 
   const handleExistingLogin = async () => {
     // If an existing user is selected, use that
@@ -52,7 +64,14 @@ export default function LoginPage() {
         if (response.ok) {
           const userSettings = await response.json();
           
-          // Apply user settings
+          // Store theme in localStorage directly to avoid temporary theme issues
+          if (userSettings.theme) {
+            localStorage.setItem('ui-theme', userSettings.theme);
+            // Now apply the theme
+            setTheme(userSettings.theme as "light" | "dark" | "system");
+          }
+          
+          // Apply horizontal sidebar setting
           if (typeof userSettings.horizontal_sidebar === 'boolean') {
             localStorage.setItem('horizontalSidebar', String(userSettings.horizontal_sidebar));
             // Dispatch event to notify components
@@ -61,18 +80,12 @@ export default function LoginPage() {
             }));
           }
           
-          // Apply theme setting if available
-          if (userSettings.theme && typeof userSettings.theme === 'string') {
-            setTheme(userSettings.theme);
-            localStorage.setItem('ui-theme', userSettings.theme);
-          }
-          
           console.log("Applied user settings:", userSettings);
         }
         
         console.log("Logged in user:", userStorage.getCurrentUser());
         
-        // Navigate to dashboard
+        // Navigate to dashboard AFTER applying settings
         router.push("/");
       }
       catch(error) {
@@ -93,6 +106,7 @@ export default function LoginPage() {
       userStorage.logout(); // Use logout instead of clearCurrentUser
       setSelectedExistingUser("");
       setSelectedUserId("");
+      // Don't modify theme - respect user preferences
     }
     
     // Handle the deletion without confirmation
@@ -102,6 +116,7 @@ export default function LoginPage() {
         userStorage.logout(); // Use logout instead of clearCurrentUser
         setSelectedExistingUser("");
         setSelectedUserId("");
+        // Don't modify theme - respect user preferences
         
         // Force re-render after successful deletion
         setRefreshKey(prev => prev + 1);
@@ -128,10 +143,11 @@ export default function LoginPage() {
     try {
       const result = await createUser.mutateAsync(newUsername);
       
-      // Set default sidebar settings for new user, but always use light theme
+      // Set default theme and sidebar settings for new user
       if (result.user_id) {
         const defaultSettings = {
           userId: result.user_id,
+          theme: 'system' as const,
           horizontal_sidebar: window.innerWidth < 768 // Mobile default is true, desktop is false
         };
         
@@ -144,13 +160,17 @@ export default function LoginPage() {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              theme: 'light',
+              theme: defaultSettings.theme,
               horizontal_sidebar: defaultSettings.horizontal_sidebar
             })
           }
         );
         
         if (response.ok) {
+          // Store theme in localStorage directly
+          localStorage.setItem('ui-theme', defaultSettings.theme);
+          // Apply settings client-side
+          setTheme(defaultSettings.theme);
           localStorage.setItem('horizontalSidebar', String(defaultSettings.horizontal_sidebar));
           
           // Trigger sidebar update
