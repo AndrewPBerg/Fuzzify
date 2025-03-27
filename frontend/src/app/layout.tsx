@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { Layout } from "@/components/layout/Layout";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { UserProvider } from "@/contexts/UserContext";
 import '@/index.css';
 import Script from "next/script";
 import { AuthCheck } from "@/components/auth/loggedInCheck";

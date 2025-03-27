@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -118,13 +118,9 @@ export function DomainRootsList() {
     );
   }
 
-  // Debug output right before rendering
-  console.log("DomainRootsList: About to render domains:", domains);
-
-  // Render domains list
   return (
     <div className="mt-4 space-y-2">
-      <h3 className="text-sm font-medium">Saved Domain Roots ({domains.length})</h3>
+      <h3 className="text-sm font-medium">Saved Domain Roots</h3>
       <ul className="space-y-2">
         {domainRoots.map((root) => (
           <li key={root} className="flex items-center justify-between bg-background/50 p-2 rounded-md border border-border/50">
