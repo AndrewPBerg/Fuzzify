@@ -621,6 +621,7 @@ export function Sidebar() {
           </Tooltip>
         )}
 
+
         {/* Collapse toggle button */}
         <Tooltip>
           <TooltipTrigger asChild>
