@@ -85,12 +85,14 @@ services:
     build:
       context: ./hero-page
       dockerfile: Dockerfile
+      target: builder  # Use the builder stage for development
     ports:
       - "10003:3000"
     volumes:
       - ./hero-page:/app
-      - /app/node_modules
-      - /app/.next
+      - /app/node_modules  # This tells Docker to use the container's node_modules
+      - /app/.next  # This tells Docker to use the container's .next directory
+    command: ["pnpm", "dev"]
     environment:
       NODE_ENV: "development"
       NEXT_TELEMETRY_DISABLED: "1"
