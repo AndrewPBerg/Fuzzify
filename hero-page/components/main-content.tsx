@@ -224,12 +224,12 @@ export default function MainContent({ title, subtitle = "", sections }: MainCont
         ref={contentRef} 
         className={cn(
           "relative z-10", 
-          isPresentationMode ? "pt-20 h-[calc(100vh-8rem)]" : ""
+          isPresentationMode ? "pt-16 sm:pt-20 h-screen sm:h-[calc(100vh-8rem)]" : ""
         )}
       >
         {isPresentationMode ? (
           // Presentation mode - show only current section
-          <div className="h-full flex items-center justify-center px-6 md:px-10">
+          <div className="h-full flex items-center justify-center px-4 sm:px-6 md:px-10">
             <div
               className={cn(
                 "w-full max-w-7xl transition-all duration-600",
@@ -248,27 +248,39 @@ export default function MainContent({ title, subtitle = "", sections }: MainCont
             )}
             style={{ willChange: 'opacity, transform' }}
           >
-            <div id="hero" className="section-container">{sectionComponents[0]}</div>
-            <div id="about" className="section-container">{sectionComponents[1]}</div>
-            <div id="tech-stack" className="section-container">{sectionComponents[2]}</div>
-            <div id="team" className="section-container">{sectionComponents[3]}</div>
-            <div id="demo" className="section-container">{sectionComponents[4]}</div>
+            {sectionComponents}
+            
+            {/* Mobile navigation dots */}
+            <div className="fixed bottom-4 left-0 right-0 flex justify-center z-30 md:hidden">
+              <div className="flex gap-2 bg-[#17345A]/80 backdrop-blur-md py-2 px-4 rounded-full">
+                {sections.map((section, index) => (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToSection(index)}
+                    className="w-3 h-3 rounded-full"
+                    style={{ 
+                      backgroundColor: currentSectionIndex === index 
+                        ? 'rgba(255, 255, 255, 0.9)' 
+                        : 'rgba(255, 255, 255, 0.3)'
+                    }}
+                    aria-label={`Go to ${section.title} section`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Presentation controls */}
       {isPresentationMode && (
-        <>
-          <PresentationControls
-            currentIndex={currentSectionIndex}
-            totalSlides={sections.length}
-            onNext={goToNextSection}
-            onPrev={goToPrevSection}
-            onExit={togglePresentationMode}
-          />
-          <StoryGuide currentSectionIndex={currentSectionIndex} isPresentationMode={isPresentationMode} />
-        </>
+        <PresentationControls
+          currentIndex={currentSectionIndex}
+          totalSlides={sections.length}
+          onPrev={goToPrevSection}
+          onNext={goToNextSection}
+          onExit={togglePresentationMode}
+        />
       )}
     </>
   )

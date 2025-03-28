@@ -40,16 +40,20 @@ export default function AboutSection() {
     // Reset styles to ensure clean animation
     gsap.set([titleRef.current, mainCardRef.current, card1Ref.current, card2Ref.current], { clearProps: "all" })
     
+    // Determine if on mobile - adjust animation parameters
+    const isMobile = window.innerWidth < 768
+    const startOffset = isMobile ? 50 : 100
+    
     // Title animation
     gsap.fromTo(titleRef.current,
       { y: 40, opacity: 0 },
       { 
         y: 0, 
         opacity: 1, 
-        duration: 0.8,
+        duration: isMobile ? 0.6 : 0.8,
         scrollTrigger: {
           trigger: titleRef.current,
-          start: "top bottom-=100",
+          start: `top bottom-=${startOffset}`,
           toggleActions: "play none none reverse"
         }
       }
@@ -61,10 +65,10 @@ export default function AboutSection() {
       { 
         y: 0, 
         opacity: 1, 
-        duration: 0.8,
+        duration: isMobile ? 0.6 : 0.8,
         scrollTrigger: {
           trigger: mainCardRef.current,
-          start: "top bottom-=50",
+          start: `top bottom-=${startOffset / 2}`,
           toggleActions: "play none none reverse"
         }
       }
@@ -76,11 +80,11 @@ export default function AboutSection() {
       { 
         y: 0, 
         opacity: 1, 
-        stagger: 0.25,
-        duration: 0.7,
+        stagger: isMobile ? 0.15 : 0.25,
+        duration: isMobile ? 0.5 : 0.7,
         scrollTrigger: {
           trigger: card1Ref.current,
-          start: "top bottom-=50",
+          start: `top bottom-=${startOffset / 2}`,
           toggleActions: "play none none reverse"
         }
       }
@@ -96,11 +100,11 @@ export default function AboutSection() {
           { 
             x: 0, 
             opacity: 1, 
-            stagger: 0.1,
-            duration: 0.5,
+            stagger: isMobile ? 0.07 : 0.1,
+            duration: isMobile ? 0.4 : 0.5,
             scrollTrigger: {
               trigger: listRef.current,
-              start: "top bottom-=30",
+              start: `top bottom-=${startOffset / 3}`,
               toggleActions: "play none none reverse"
             }
           }
@@ -127,10 +131,17 @@ export default function AboutSection() {
       }, 50)
     }
     
+    // Listen for resize to adjust animations
+    const handleResize = () => {
+      initAnimations()
+    }
+    
     window.addEventListener('refreshAnimations', handleRefreshAnimations)
+    window.addEventListener('resize', handleResize)
     
     return () => {
       window.removeEventListener('refreshAnimations', handleRefreshAnimations)
+      window.removeEventListener('resize', handleResize)
       
       // Clean up ScrollTriggers for this section only
       ScrollTrigger.getAll().forEach(trigger => {
@@ -146,23 +157,23 @@ export default function AboutSection() {
   }, [])
 
   return (
-    <div ref={sectionRef} className="py-20 md:py-32 px-6 md:px-10">
+    <div ref={sectionRef} className="py-16 sm:py-20 md:py-32 px-4 sm:px-6 md:px-10" id="about">
       <div className="max-w-7xl mx-auto">
-        <h2 ref={titleRef} className="text-3xl md:text-4xl font-bold text-center mb-16 text-white">
+        <h2 ref={titleRef} className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 text-white">
           About <span className="font-aclonica">Fuzzify</span>
         </h2>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card ref={mainCardRef} className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Shield className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-2 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl">
+                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
-              <CardDescription className="text-white/70">Protecting your brand from domain impersonation threats</CardDescription>
+              <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-lg leading-relaxed text-white/80">
+              <p className="text-base sm:text-lg leading-relaxed text-white/80">
                 Fuzzify is an advanced security tool that uses DNS fuzzing to proactively detect malicious lookalike domains. 
                 Our system continuously scans for newly registered domains that could impersonate your brand, analyzes them for 
                 malicious intent, and classifies each potential threat on a comprehensive risk scale.
@@ -170,16 +181,16 @@ export default function AboutSection() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6">
+          <div className="grid gap-4 sm:gap-6">
             <Card ref={card1Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-primary" />
+              <CardHeader className="pb-2 sm:pb-4">
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Threat Detection
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul ref={listItems1Ref} className="space-y-2 text-white/80">
+                <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
                     <span>Identifies typosquatting domains (e.g., amazom.com, g00gle.com)</span>
@@ -201,33 +212,29 @@ export default function AboutSection() {
             </Card>
 
             <Card ref={card2Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Threat Classification
+              <CardHeader className="pb-2 sm:pb-4">
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  Risk Scoring
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="leading-relaxed text-white/80">
-                  Fuzzify doesn't just find suspicious domains—it analyzes their potential threat level. 
-                  Our proprietary threat scoring system evaluates each domain based on multiple factors:
-                </p>
-                <ul ref={listItems2Ref} className="space-y-2 text-white/80 mt-2">
+                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Visual similarity to legitimate domains</span>
+                    <span>Comprehensive 5-level risk classification system</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Suspicious hosting or registration patterns</span>
+                    <span>ML-based malicious intent prediction</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Content analysis for phishing indicators</span>
+                    <span>Automated domain registration analysis</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Comprehensive risk score with actionable remediation</span>
+                    <span>Content similarity assessment for phishing detection</span>
                   </li>
                 </ul>
               </CardContent>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Shield } from "lucide-react"
 
 interface ShieldIcon {
@@ -17,21 +17,32 @@ export default function AnimatedBackground() {
   const containerRef = useRef<HTMLDivElement>(null)
   const iconsRef = useRef<ShieldIcon[]>([])
   const animationRef = useRef<number>()
+  const [isMounted, setIsMounted] = useState(false)
 
   // Initialize shield icons
   useEffect(() => {
+    setIsMounted(true)
     if (!containerRef.current) return
 
-    // Create random shield icons
+    // Determine if on mobile
+    const isMobile = window.innerWidth < 768
+    
+    // Create random shield icons - fewer on mobile
     const icons: ShieldIcon[] = []
-    const count = Math.min(15, Math.floor(window.innerWidth / 100)) // Responsive count
+    const count = isMobile 
+      ? Math.min(8, Math.floor(window.innerWidth / 120)) // Fewer on mobile
+      : Math.min(15, Math.floor(window.innerWidth / 100))
 
     for (let i = 0; i < count; i++) {
+      // Smaller icons on mobile
+      const sizeBase = isMobile ? 15 : 20
+      const sizeVariation = isMobile ? 20 : 30
+      
       icons.push({
         id: i,
         x: Math.random() * 100, // percentage
         y: Math.random() * 100, // percentage
-        size: 20 + Math.random() * 30, // px
+        size: sizeBase + Math.random() * sizeVariation, // px
         speed: 0.05 + Math.random() * 0.1,
         opacity: 0.03 + Math.random() * 0.07,
         rotation: Math.random() * 360,
@@ -52,11 +63,13 @@ export default function AnimatedBackground() {
           icon.x = Math.random() * 100
         }
 
-        // Slight horizontal movement
-        const newX = icon.x + Math.sin(newY / 20) * 0.1
+        // Slight horizontal movement - less movement on mobile for better performance
+        const horizontalFactor = window.innerWidth < 768 ? 0.05 : 0.1
+        const newX = icon.x + Math.sin(newY / 20) * horizontalFactor
 
-        // Slow rotation
-        const newRotation = icon.rotation + 0.05
+        // Slow rotation - slower on mobile for better performance
+        const rotationSpeed = window.innerWidth < 768 ? 0.03 : 0.05
+        const newRotation = icon.rotation + rotationSpeed
 
         return {
           ...icon,
@@ -83,17 +96,56 @@ export default function AnimatedBackground() {
     // Start animation
     animationRef.current = requestAnimationFrame(animate)
 
+    // Handle resize
+    const handleResize = () => {
+      // Clear current animation
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      
+      // Reinitialize icons with new screen size
+      const isMobile = window.innerWidth < 768
+      const count = isMobile 
+        ? Math.min(8, Math.floor(window.innerWidth / 120))
+        : Math.min(15, Math.floor(window.innerWidth / 100))
+      
+      // Update icons based on new screen size
+      const icons: ShieldIcon[] = []
+      for (let i = 0; i < count; i++) {
+        const sizeBase = isMobile ? 15 : 20
+        const sizeVariation = isMobile ? 20 : 30
+        
+        icons.push({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: sizeBase + Math.random() * sizeVariation,
+          speed: 0.05 + Math.random() * 0.1,
+          opacity: 0.03 + Math.random() * 0.07,
+          rotation: Math.random() * 360,
+        })
+      }
+      
+      iconsRef.current = icons
+      
+      // Restart animation
+      animationRef.current = requestAnimationFrame(animate)
+    }
+    
+    window.addEventListener('resize', handleResize)
+
     // Cleanup
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
+      window.removeEventListener('resize', handleResize)
     }
   }, [])
 
   return (
     <div ref={containerRef} className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
-      {iconsRef.current.map((icon) => (
+      {isMounted && iconsRef.current.map((icon) => (
         <div
           key={icon.id}
           className="shield-icon absolute"
