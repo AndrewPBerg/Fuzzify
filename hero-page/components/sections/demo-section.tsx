@@ -175,27 +175,27 @@ export default function DemoSection() {
                 <ul ref={featuresRef} className="space-y-2 text-white/80 max-w-md mx-auto">
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-primary mt-0.5" />
-                    <span>Continuous domain impersonation scanning</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
-                    <span>5-level threat classification system</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <BarChart3 className="h-4 w-4 text-primary mt-0.5" />
-                    <span>Visual domain similarity analysis</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-primary mt-0.5" />
-                    <span>Automated remediation recommendations</span>
+                    <span>TODO</span>
                   </li>
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button asChild className="w-full gap-2 bg-white text-[#17345A] hover:bg-white/90">
-                  <Link href="http://localhost:10002/" target="_blank">
-                    Launch Threat Dashboard
-                    <ExternalLink className="h-4 w-4" />
+                <Button asChild className="w-full bg-white text-[#17345A] hover:bg-white/90 transition-all duration-200">
+                  <Link href="http://localhost:10002/" target="_blank" className="flex items-center justify-center">
+                    <span>Launch Threat Dashboard</span>
+                    <ExternalLink className="h-4 w-4 ml-2 relative -top-px" />
                   </Link>
                 </Button>
               </CardFooter>

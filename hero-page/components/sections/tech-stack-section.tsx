@@ -137,28 +137,28 @@ export default function TechStackSection() {
     {
       category: "Core Technologies",
       items: [
-        { name: "DNS Analysis Engine", description: "Custom domain analysis algorithms" },
-        { name: "Machine Learning", description: "Intelligent threat pattern recognition" },
-        { name: "Python", description: "Core fuzzing and analysis algorithms" },
-        { name: "Elasticsearch", description: "High-speed threat data storage and query" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
       ],
     },
     {
       category: "Monitoring & Detection",
       items: [
-        { name: "Domain Registration API", description: "Real-time domain monitoring" },
-        { name: "NLP Processing", description: "Text similarity and pattern matching" },
-        { name: "Computer Vision", description: "Visual similarity detection" },
-        { name: "Threat Intelligence", description: "Integration with global threat databases" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
       ],
     },
     {
       category: "User Interface & Reports",
       items: [
-        { name: "Next.js Dashboard", description: "Real-time threat monitoring UI" },
-        { name: "Data Visualization", description: "Comprehensive threat reporting" },
-        { name: "Alert System", description: "Multi-channel notification system" },
-        { name: "Threat Scoring API", description: "Categorizes threats by severity level" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
+        { name: "TODO", description: "TODO" },
       ],
     },
   ]
