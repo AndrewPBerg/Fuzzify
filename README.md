@@ -9,10 +9,6 @@ A full-stack application for DNS fuzzing and monitoring using DNSTwist, Flask, N
 ## Prerequisites
 
 - Docker and Docker Compose
-- Python 3.11 or higher
-- Node.js 18 or higher
-- Poetry, uv, or venv for Python dependency management
-- npm or yarn for Node.js dependency management
 
 ## Installation
 
@@ -23,48 +19,10 @@ git clone <repository-url>
 cd dnstwist-testing
 ```
 
-### Backend Setup
-
-1. Change to the backend directory:
-```bash
-cd backend
-```
-
-2. Install Python dependencies (choose one):
-```bash
-# Using uv
-uv pip install -r requirements.txt
-
-# Using Poetry
-poetry install
-
-# Using venv
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-3. Configure environment variables:
-- Copy `.env.example` to `.env`
-- Update the values as needed
-
-### Frontend Setup
-
-1. Change to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install Node.js dependencies:
-```bash
-npm install
-```
-
 ## Running the Application
 
-### Option 1: Running with Docker (Recommended)
+Start all services with Docker Compose:
 
-1. Start all services:
 ```bash
 docker compose up --build
 ```
@@ -74,7 +32,6 @@ The following services will be available:
 - Backend API: http://localhost:10001
 - MySQL: localhost:5010
 - PubSub Emulator: localhost:8085
-
 
 ### Docker Cleanup
 
@@ -88,26 +45,6 @@ Run the following one-liner to take back control of your cached builds, containe
 docker compose down --rmi all --volumes --remove-orphans
 docker builder prune -f --filter label=com.docker.compose.project=dnstwist-testing
 ```
-
-
-
-### Option 2: Running Locally
-
-1. Start the backend server:
-```bash
-cd backend
-python app.py
-```
-
-2. In a new terminal, start the frontend:
-```bash
-cd frontend
-npm run dev
-```
-
-Access the application at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
 
 ## Development
 
@@ -126,22 +63,6 @@ The frontend is built with:
 - React
 - TypeScript
 
-## Testing
-
-### Backend Tests [TODO]
-
-```bash
-cd backend
-python -m pytest
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-npm test
-```
-
 ## API Documentation
 
 ### Available Endpoints
@@ -155,13 +76,11 @@ npm test
 ### Common Issues
 
 1. Database Connection Issues
-   - Verify MySQL is running
-   - Check .env configuration
-   - Ensure proper network connectivity
+   - Verify MySQL container is running
+   - Check Docker network connectivity
 
 2. Pub/Sub Emulator Issues
-   - Verify emulator is running
-   - Check environment variables
+   - Verify emulator container is running
    - Ensure proper port configuration
 
 ## License
