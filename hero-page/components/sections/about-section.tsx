@@ -168,15 +168,16 @@ export default function AboutSection() {
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl">
                 <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                {/* what is fuzzify */}
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
+              {/* what is fuzzify subtitle */}
               <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* what is fuzzify text body */}
               <p className="text-base sm:text-lg leading-relaxed text-white/80">
-                Fuzzify is an advanced security tool that uses DNS fuzzing to proactively detect malicious lookalike domains. 
-                Our system continuously scans for newly registered domains that could impersonate your brand, analyzes them for 
-                malicious intent, and classifies each potential threat on a comprehensive risk scale.
+                TODO  
               </p>
             </CardContent>
           </Card>
@@ -186,26 +187,28 @@ export default function AboutSection() {
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
                   <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  {/* Threat Detection */}
                   Threat Detection
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Threat Detection list items */}
                 <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Identifies typosquatting domains (e.g., amazom.com, g00gle.com)</span>
+                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Detects homograph attacks using similar-looking characters</span>
+                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Monitors for combosquatting domains (e.g., google-login.com)</span>
+                    <span>TODO (e.g., google-login.com)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Alerts on bitsquatting domains targeting bit-flip errors</span>
+                    <span>TODO (e.g., google-login.com)</span>
                   </li>
                 </ul>
               </CardContent>
@@ -215,6 +218,7 @@ export default function AboutSection() {
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  {/* Risk Scoring */}
                   Risk Scoring
                 </CardTitle>
               </CardHeader>
@@ -222,19 +226,19 @@ export default function AboutSection() {
                 <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Comprehensive 5-level risk classification system</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>ML-based malicious intent prediction</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Automated domain registration analysis</span>
+                    <span>TODO</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Content similarity assessment for phishing detection</span>
+                    <span>TODO</span>
                   </li>
                 </ul>
               </CardContent>
