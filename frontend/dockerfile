@@ -37,7 +37,7 @@ COPY --from=builder /app/postcss.config.js ./
 COPY --from=builder /app/tailwind.config.js ./
 # Install only production dependencies
 RUN npm ci --omit=dev
-EXPOSE 3000
+EXPOSE 10002
 CMD ["npm", "start"]
 
 ###############################

@@ -37,4 +37,4 @@ COPY --from=builder /app/.next ./.next
 # Set the command to start the app
 CMD ["pnpm", "start"]
 
-EXPOSE 3000 
+EXPOSE 10003
