@@ -81,6 +81,24 @@ services:
     networks:
       - app-network
 
+  hero:
+    build:
+      context: ./hero-page
+      dockerfile: Dockerfile
+    ports:
+      - "10003:3000"
+    volumes:
+      - ./hero-page:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: "development"
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Hot reloading configuration
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    networks:
+      - app-network
 volumes:
   mysql_data:
 
