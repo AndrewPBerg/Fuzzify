@@ -18,15 +18,17 @@ interface Section {
 
 interface MainContentProps {
   title: string
-  subtitle: string
+  subtitle?: string
   sections: Section[]
 }
 
-export default function MainContent({ title, subtitle, sections }: MainContentProps) {
+export default function MainContent({ title, subtitle = "", sections }: MainContentProps) {
   const [isPresentationMode, setIsPresentationMode] = useState(false)
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  // Track if we need to refresh animations
+  const shouldRefreshAnimations = useRef(false)
 
   // Handle presentation mode toggle
   const togglePresentationMode = () => {
@@ -60,7 +62,22 @@ export default function MainContent({ title, subtitle, sections }: MainContentPr
       } catch (error) {
         console.error("Fullscreen API error:", error)
       }
-      setIsPresentationMode(false)
+      
+      // Mark that we need to refresh animations
+      shouldRefreshAnimations.current = true
+      
+      // First mark as transitioning
+      setIsTransitioning(true)
+      
+      // After a short delay, exit presentation mode
+      setTimeout(() => {
+        setIsPresentationMode(false)
+        
+        // End transition after changing mode
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 300)
+      }, 300)
     }
   }
 
@@ -129,7 +146,17 @@ export default function MainContent({ title, subtitle, sections }: MainContentPr
   useEffect(() => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && isPresentationMode) {
-        setIsPresentationMode(false)
+        // If exiting fullscreen outside our toggle function, ensure we properly exit presentation mode
+        shouldRefreshAnimations.current = true
+        setIsTransitioning(true)
+        
+        setTimeout(() => {
+          setIsPresentationMode(false)
+          
+          setTimeout(() => {
+            setIsTransitioning(false)
+          }, 300)
+        }, 300)
       }
     }
 
@@ -147,6 +174,28 @@ export default function MainContent({ title, subtitle, sections }: MainContentPr
       }
     }
   }, [isPresentationMode])
+
+  // Effect to handle refreshing animations after exiting presentation mode
+  useEffect(() => {
+    if (!isTransitioning && !isPresentationMode && shouldRefreshAnimations.current) {
+      shouldRefreshAnimations.current = false
+      
+      // Force a reflow to trigger animations
+      if (contentRef.current) {
+        // Dispatch a custom event that section components can listen for
+        const refreshEvent = new CustomEvent('refreshAnimations')
+        window.dispatchEvent(refreshEvent)
+        
+        // Add a class momentarily to force reflow
+        contentRef.current.classList.add('animation-refresh')
+        setTimeout(() => {
+          if (contentRef.current) {
+            contentRef.current.classList.remove('animation-refresh')
+          }
+        }, 50)
+      }
+    }
+  }, [isPresentationMode, isTransitioning])
 
   // Map sections to components
   const sectionComponents = [
@@ -171,7 +220,13 @@ export default function MainContent({ title, subtitle, sections }: MainContentPr
       />
 
       {/* Main content */}
-      <div ref={contentRef} className={cn("relative z-10", isPresentationMode ? "pt-20 h-[calc(100vh-8rem)]" : "")}>
+      <div 
+        ref={contentRef} 
+        className={cn(
+          "relative z-10", 
+          isPresentationMode ? "pt-20 h-[calc(100vh-8rem)]" : ""
+        )}
+      >
         {isPresentationMode ? (
           // Presentation mode - show only current section
           <div className="h-full flex items-center justify-center px-6 md:px-10">
@@ -186,12 +241,18 @@ export default function MainContent({ title, subtitle, sections }: MainContentPr
           </div>
         ) : (
           // Normal mode - show all sections
-          <div>
-            <div id="hero">{sectionComponents[0]}</div>
-            <div id="about">{sectionComponents[1]}</div>
-            <div id="tech-stack">{sectionComponents[2]}</div>
-            <div id="team">{sectionComponents[3]}</div>
-            <div id="demo">{sectionComponents[4]}</div>
+          <div 
+            className={cn(
+              "transition-opacity duration-300",
+              isTransitioning ? "opacity-0" : "opacity-100"
+            )}
+            style={{ willChange: 'opacity, transform' }}
+          >
+            <div id="hero" className="section-container">{sectionComponents[0]}</div>
+            <div id="about" className="section-container">{sectionComponents[1]}</div>
+            <div id="tech-stack" className="section-container">{sectionComponents[2]}</div>
+            <div id="team" className="section-container">{sectionComponents[3]}</div>
+            <div id="demo" className="section-container">{sectionComponents[4]}</div>
           </div>
         )}
       </div>

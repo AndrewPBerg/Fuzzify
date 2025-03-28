@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,9 +11,36 @@ export default function TechStackSection() {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const cardsRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<HTMLDivElement[]>([])
+  const [isClient, setIsClient] = useState(false)
 
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger)
+  // Function to initialize animations
+  const initAnimations = () => {
+    // Clear any existing animations first
+    cardRefs.current.forEach(card => {
+      gsap.killTweensOf(card)
+    })
+    gsap.killTweensOf(titleRef.current)
+    gsap.killTweensOf(sectionRef.current)
+    
+    // ScrollTrigger may not be registered yet
+    if (!ScrollTrigger.getAll) {
+      gsap.registerPlugin(ScrollTrigger)
+    } else {
+      // Clear existing ScrollTriggers for this section
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === cardsRef.current ||
+            trigger.vars.trigger === sectionRef.current) {
+          trigger.kill()
+        }
+      })
+    }
+
+    // Reset styles to ensure clean animation
+    gsap.set(titleRef.current, { clearProps: "all" })
+    cardRefs.current.forEach(card => {
+      gsap.set(card, { clearProps: "all" })
+    })
 
     // Title animation
     gsap.fromTo(titleRef.current,
@@ -60,11 +87,44 @@ export default function TechStackSection() {
         scrub: true
       }
     })
+  }
 
+  // Initialize animations on mount and handle animation refresh
+  useEffect(() => {
+    setIsClient(true)
+    
+    // First init
+    initAnimations()
+    
+    // Listen for the custom refresh event
+    const handleRefreshAnimations = () => {
+      // Re-initialize all animations
+      setTimeout(() => {
+        initAnimations()
+      }, 50)
+    }
+    
+    window.addEventListener('refreshAnimations', handleRefreshAnimations)
+    
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      window.removeEventListener('refreshAnimations', handleRefreshAnimations)
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === cardsRef.current ||
+            trigger.vars.trigger === sectionRef.current) {
+          trigger.kill()
+        }
+      })
     }
   }, [])
+
+  // Reset refs when coming back from presentation mode
+  useEffect(() => {
+    // Re-init animation when client-side rendering is confirmed
+    if (isClient) {
+      cardRefs.current = []
+    }
+  }, [isClient])
 
   // Add cards to refs
   const addToRefs = (el: HTMLDivElement) => {

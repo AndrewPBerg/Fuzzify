@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -26,9 +26,36 @@ export default function TeamSection() {
   const subtitleRef = useRef<HTMLParagraphElement>(null)
   const cardContainerRef = useRef<HTMLDivElement>(null)
   const memberRefs = useRef<HTMLDivElement[]>([])
+  const [isClient, setIsClient] = useState(false)
 
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger)
+  // Function to initialize animations
+  const initAnimations = () => {
+    // Clear any existing animations first
+    gsap.killTweensOf([titleRef.current, subtitleRef.current])
+    memberRefs.current.forEach(card => {
+      gsap.killTweensOf(card)
+    })
+    
+    // ScrollTrigger may not be registered yet
+    if (!ScrollTrigger.getAll) {
+      gsap.registerPlugin(ScrollTrigger)
+    } else {
+      // Clear existing ScrollTriggers for this section
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === subtitleRef.current ||
+            trigger.vars.trigger === cardContainerRef.current ||
+            trigger.vars.trigger === sectionRef.current) {
+          trigger.kill()
+        }
+      })
+    }
+    
+    // Reset styles to ensure clean animation
+    gsap.set([titleRef.current, subtitleRef.current], { clearProps: "all" })
+    memberRefs.current.forEach(card => {
+      gsap.set(card, { clearProps: "all" })
+    })
 
     // Title and subtitle animations
     gsap.fromTo([titleRef.current, subtitleRef.current],
@@ -89,11 +116,47 @@ export default function TeamSection() {
         })
       }
     })
+  }
 
+  // Initialize animations on mount and handle animation refresh
+  useEffect(() => {
+    setIsClient(true)
+    
+    // First init
+    initAnimations()
+    
+    // Listen for the custom refresh event
+    const handleRefreshAnimations = () => {
+      // Re-initialize all animations
+      setTimeout(() => {
+        initAnimations()
+      }, 50)
+    }
+    
+    window.addEventListener('refreshAnimations', handleRefreshAnimations)
+    
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      window.removeEventListener('refreshAnimations', handleRefreshAnimations)
+      
+      // Clean up ScrollTriggers for this section only
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === subtitleRef.current ||
+            trigger.vars.trigger === cardContainerRef.current ||
+            trigger.vars.trigger === sectionRef.current) {
+          trigger.kill()
+        }
+      })
     }
   }, [])
+
+  // Reset refs when coming back from presentation mode
+  useEffect(() => {
+    // Re-init animation when client-side rendering is confirmed
+    if (isClient) {
+      memberRefs.current = []
+    }
+  }, [isClient])
 
   // Add team members to refs
   const addToRefs = (el: HTMLDivElement) => {

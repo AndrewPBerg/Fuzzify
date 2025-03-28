@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,9 +14,31 @@ export default function AboutSection() {
   const card2Ref = useRef<HTMLDivElement>(null)
   const listItems1Ref = useRef<HTMLUListElement>(null)
   const listItems2Ref = useRef<HTMLUListElement>(null)
+  const [isClient, setIsClient] = useState(false)
   
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger)
+  // Function to initialize animations
+  const initAnimations = () => {
+    // Clear any existing animations first
+    gsap.killTweensOf([titleRef.current, mainCardRef.current, card1Ref.current, card2Ref.current])
+    
+    // ScrollTrigger may not be registered yet
+    if (!ScrollTrigger.getAll) {
+      gsap.registerPlugin(ScrollTrigger)
+    } else {
+      // Clear existing ScrollTriggers for this section
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === mainCardRef.current ||
+            trigger.vars.trigger === card1Ref.current ||
+            trigger.vars.trigger === listItems1Ref.current ||
+            trigger.vars.trigger === listItems2Ref.current) {
+          trigger.kill()
+        }
+      })
+    }
+    
+    // Reset styles to ensure clean animation
+    gsap.set([titleRef.current, mainCardRef.current, card1Ref.current, card2Ref.current], { clearProps: "all" })
     
     // Title animation
     gsap.fromTo(titleRef.current,
@@ -88,9 +110,38 @@ export default function AboutSection() {
     
     animateListItems(listItems1Ref)
     animateListItems(listItems2Ref)
+  }
+  
+  // Initialize animations on mount and handle animation refresh
+  useEffect(() => {
+    setIsClient(true)
+    
+    // First init
+    initAnimations()
+    
+    // Listen for the custom refresh event
+    const handleRefreshAnimations = () => {
+      // Re-initialize all animations
+      setTimeout(() => {
+        initAnimations()
+      }, 50)
+    }
+    
+    window.addEventListener('refreshAnimations', handleRefreshAnimations)
     
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      window.removeEventListener('refreshAnimations', handleRefreshAnimations)
+      
+      // Clean up ScrollTriggers for this section only
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === titleRef.current || 
+            trigger.vars.trigger === mainCardRef.current ||
+            trigger.vars.trigger === card1Ref.current ||
+            trigger.vars.trigger === listItems1Ref.current ||
+            trigger.vars.trigger === listItems2Ref.current) {
+          trigger.kill()
+        }
+      })
     }
   }, [])
 
