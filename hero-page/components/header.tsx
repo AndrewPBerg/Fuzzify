@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Menu, PresentationIcon, X } from "lucide-react"
+import { Menu, PresentationIcon, X, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 
@@ -31,6 +31,7 @@ export default function Header({
   const headerRef = useRef<HTMLElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [dashboardUrl, setDashboardUrl] = useState("http://localhost:10002/")
 
   useEffect(() => {
     // Handle scroll effect
@@ -39,6 +40,16 @@ export default function Header({
     }
 
     window.addEventListener("scroll", handleScroll)
+    
+    // Add code to determine the dashboard URL based on hostname
+    const isLocalhost = window.location.hostname === "localhost" || 
+                        window.location.hostname === "127.0.0.1";
+    
+    if (!isLocalhost) {
+      const baseUrl = window.location.origin;
+      setDashboardUrl(`${baseUrl}/demo-app`);
+    }
+    
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
@@ -79,7 +90,7 @@ export default function Header({
         )}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
+          <div className="flex items-center gap-3 md:gap-4">
             <div className="flex items-center gap-2 md:gap-3">
               <Image 
                 src="/fluffify_logo.png" 
@@ -92,6 +103,17 @@ export default function Header({
                 Fuzzify
               </span>
             </div>
+            
+            <Button
+              asChild
+              className="bg-primary hover:bg-primary/90 text-white text-xs sm:text-sm font-medium px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all duration-300 flex items-center gap-1.5 sm:gap-2"
+            >
+              <a href={dashboardUrl} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                <span>Try Now</span>
+                <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1" />
+              </a>
+            </Button>
+            
             {subtitle && <span className="hidden md:inline-block text-white/60 text-sm ml-4">{subtitle}</span>}
           </div>
 
@@ -184,7 +206,17 @@ export default function Header({
             ))}
           </nav>
           
-          <div className="mt-auto">
+          <div className="mt-auto space-y-4">
+            <Button
+              asChild
+              className="w-full bg-primary hover:bg-primary/90 text-white text-base font-medium py-3 rounded-full transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <a href={dashboardUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                <span>Try Now</span>
+                <ExternalLink className="h-5 w-5" />
+              </a>
+            </Button>
+            
             <Button
               onClick={() => {
                 onStartPresentation()

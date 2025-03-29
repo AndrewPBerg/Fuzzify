@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,21 @@ export default function DemoSection() {
   const videoRef = useRef<HTMLDivElement>(null)
   const featuresRef = useRef<HTMLUListElement>(null)
   
+  // Add a state for the dashboard URL
+  const [dashboardUrl, setDashboardUrl] = useState("http://localhost:10002/")
+  
   useEffect(() => {
+    // Determine if we're running locally or in production
+    const isLocalhost = window.location.hostname === "localhost" || 
+                        window.location.hostname === "127.0.0.1";
+    
+    // Set the appropriate URL
+    if (!isLocalhost) {
+      // Use the current origin with /demo-app path
+      const baseUrl = window.location.origin;
+      setDashboardUrl(`${baseUrl}/demo-app`);
+    }
+    
     gsap.registerPlugin(ScrollTrigger)
     
     // Heading animations
@@ -193,7 +207,7 @@ export default function DemoSection() {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full bg-white text-[#17345A] hover:bg-white/90 transition-all duration-200">
-                  <Link href="http://localhost:10002/" target="_blank" className="flex items-center justify-center">
+                  <Link href={dashboardUrl} target="_blank" className="flex items-center justify-center">
                     <span>Launch Threat Dashboard</span>
                     <ExternalLink className="h-4 w-4 ml-2 relative -top-px" />
                   </Link>
