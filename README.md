@@ -1,24 +1,12 @@
 <!-- Start of Selection -->
 <p align="center">
-  <img src="fuzzify_logo.png" alt="Fuzzify Logo" width="200" style="display:inline-block;">
+  <img src="logo.svg" alt="Fuzzify Logo" width="300" style="display:inline-block;">
 
 </p>
 
-<!-- Fuzzify Text start -->
-
-<h1 align="center" style="font-weight: bold; font-size: 3rem;">
-  <span style="background: linear-gradient(to right, #14B8A6, #6366F1); 
-  -webkit-background-clip: text; 
-  background-clip: text; 
-  color: transparent; 
-  display: inline-block; 
-  font-family: 'Aclonica', sans-serif;">Fuzzify</span>
-</h1>
-<p align="center" style="font-size: 1.25rem; margin-top: 0.5rem;">
+<p align="center" style="font-size: 1.25rem; margin-top: 0.5rem; color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px;">
   Secure your domain and monitor domain impersonations
 </p>
-<!-- Fuzzify Text end -->
-
 <!-- End of Selection -->
 
 
@@ -28,7 +16,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
   <img src="https://img.shields.io/github/stars/AndrewPBerg/Fuzzify?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/forks/AndrewPBerg/Fuzzify?style=social" alt="GitHub forks">
+  <!-- <img src="https://img.shields.io/github/forks/AndrewPBerg/Fuzzify?style=social" alt="GitHub forks"> -->
   <!-- Deployment Status Badges -->
    <!-- ![Deployment Status](https://img.shields.io/github/workflow/status/AndrewPBerg/Fuzzify/deploy?label=deployment) -->
    <!-- You can also use service-specific badges like: -->
