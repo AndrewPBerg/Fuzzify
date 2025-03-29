@@ -117,7 +117,7 @@ export function Layout({ children }: LayoutProps) {
       
       {/* Persistent Message in Bottom Left */}
       <div className="fixed bottom-3 left-3 z-50 max-w-sm p-3 text-sm bg-background/80 backdrop-blur-sm border border-border rounded-md shadow-md">
-        <a href={window.location.origin} className="flex items-center text-primary hover:underline mt-2">
+        <a href={typeof window !== 'undefined' ? window.location.origin : '/'} className="flex items-center text-primary hover:underline mt-2">
           <HomeIcon className="h-4 w-4 mr-1" />
           <span>Back To Landing Page</span>
         </a>
