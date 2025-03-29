@@ -136,13 +136,13 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" className="w-56 mt-1">
               <DropdownMenuLabel>{username}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              {/* <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild className="text-destructive">
                 <Link href="/login" onClick={() => { userStorage.logout(); }}>
                   <span>Logout</span>
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -584,12 +584,12 @@ export function Sidebar() {
             className="w-56 mt-1"
           >
             <DropdownMenuLabel>{username}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="text-destructive">
               <Link href="/login" onClick={() => { userStorage.logout(); }}>
                 <span>Logout</span>
               </Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
 
