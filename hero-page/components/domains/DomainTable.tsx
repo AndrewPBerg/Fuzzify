@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { usePermutations } from "@/lib/api/permuatations";
+import { userStorage } from "@/lib/demo-data/user";
+import domainsData, { Permutation } from "@/lib/demo-data/domains";
 
 // Define domain interface
 interface Domain {
@@ -49,71 +50,73 @@ export function DomainTable() {
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
-  // Get userId from localStorage
-  const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") || "default-user" : "default-user";
+  // Get current user from userStorage
+  const currentUser = userStorage.getCurrentUser();
   
-  // Use the permutations hook
-  const { 
-    data: permutationsData, 
-    isLoading: permutationsLoading, 
-    error: permutationsError 
-  } = usePermutations(
-    userId, 
-    selectedDomainRoot || "",
-  );
-
-  // Fetch domain roots from localStorage
+  // Load domain roots
   useEffect(() => {
-    const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    setDomainRoots(storedRoots);
-    
-    // Add event listener for storage changes
-    const handleStorageChange = () => {
-      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-      setDomainRoots(updatedRoots);
-    };
-    
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  // Update domains state when permutations data changes
-  useEffect(() => {
-    if (permutationsData) {
-      // Transform data to match our Domain interface
-      const transformedData = permutationsData.map((item, index) => ({
-        id: index + 1,
-        permutation_name: item.permutation_name,
-        domain_name: item.domain_name,
-        server: item.server,
-        mail_server: item.mail_server,
-        risk: item.risk,
-        ip_address: item.ip_address
-      }));
+    try {
+      // Get domains from demo data
+      const domains = domainsData.getDomainsByUserId(currentUser.user_id);
+      const domainNames = domains.map(domain => domain.domain_name);
       
-      setDomains(transformedData);
-    } else if (!selectedDomainRoot) {
-      setDomains([]);
-    }
-  }, [permutationsData, selectedDomainRoot]);
-
-  // Update loading and error states based on the query
-  useEffect(() => {
-    setLoading(permutationsLoading);
-    
-    if (permutationsError) {
-      const errorMessage = permutationsError instanceof Error 
-        ? permutationsError.message 
-        : 'Failed to fetch domain permutations';
+      // Set domain roots
+      setDomainRoots(domainNames);
       
-      setError(errorMessage);
+      // Select the first domain by default if there is one
+      if (domainNames.length > 0 && !selectedDomainRoot) {
+        setSelectedDomainRoot(domainNames[0]);
+      }
+    } catch (error) {
+      console.error("Error loading domain roots:", error);
       toast.error("Error", {
-        description: errorMessage,
+        description: "Failed to load domain roots",
       });
-    } else {
-      setError(null);
     }
-  }, [permutationsLoading, permutationsError]);
+  }, [currentUser.user_id, selectedDomainRoot]);
+
+  // Load permutations when selectedDomainRoot changes
+  useEffect(() => {
+    if (!selectedDomainRoot) {
+      setDomains([]);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Simulate network delay for demo
+    const timer = setTimeout(() => {
+      try {
+        // Get permutations for selected domain from demo data
+        const permutations = domainsData.getPermutationsByDomain(selectedDomainRoot);
+        
+        // Transform to match our Domain interface
+        const transformedData = permutations.map((item, index) => ({
+          id: index + 1,
+          permutation_name: item.permutation_name,
+          domain_name: item.domain_name,
+          server: item.server,
+          mail_server: item.mail_server,
+          risk: item.risk,
+          ip_address: item.ip_address
+        }));
+        
+        setDomains(transformedData);
+        setLoading(false);
+        setError(null);
+      } catch (error) {
+        console.error("Error loading permutations:", error);
+        setError("Failed to load permutations");
+        toast.error("Error", {
+          description: "Failed to load permutations",
+        });
+        setLoading(false);
+      }
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, [selectedDomainRoot]);
 
   // Apply filters and search
   const filteredDomains = domains.filter(domain => {

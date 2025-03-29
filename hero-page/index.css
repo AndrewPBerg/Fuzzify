@@ -121,7 +121,7 @@
   }
 
   .page-container {
+    @apply animate-fade-in;
     padding: 1.5rem;
-    animation: fade-in 0.3s ease-out;
   }
 }

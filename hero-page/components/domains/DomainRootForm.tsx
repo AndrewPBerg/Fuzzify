@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateDomain } from "@/lib/api/domains";
-import { userStorage } from "@/lib/api/users";
+import { userStorage } from "@/lib/demo-data/user";
+import domainsData from "@/lib/demo-data/domains";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -28,7 +28,7 @@ const isValidDomain = (domain: string): boolean => {
 
 export function DomainRootForm() {
   const [domainRoot, setDomainRoot] = useState("");
-  const createDomainMutation = useCreateDomain();
+  const [isPending, setIsPending] = useState(false);
 
   const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,30 +47,40 @@ export function DomainRootForm() {
       return;
     }
     
-    // Check if domain already exists in local storage
-    const existingRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+    // Check if domain already exists in demo data
+    const existingDomains = domainsData.domains;
+    const domainExists = existingDomains.some(
+      domain => domain.domain_name.toLowerCase() === domainRoot.toLowerCase()
+    );
     
-    if (existingRoots.includes(domainRoot)) {
+    if (domainExists) {
       toast.error("Error", {
-        description: "This domain root already exists",
+        description: "This domain already exists in the system.",
       });
       return;
     }
     
-    const currentUser = userStorage.getCurrentUser();
+    setIsPending(true);
     
-    // Use the mutation from domains.ts
-    createDomainMutation.mutate(
-      { 
-        userId: currentUser.userId, 
-        domain_name: domainRoot 
-      },
-      {
-        onSuccess: () => {
-          setDomainRoot("");
-        }
+    // Simulate API call with timeout
+    setTimeout(() => {
+      try {
+        // In a real app, we would store this in a database
+        // For demo, we'll just show a success message
+        toast.success("Domain Added", {
+          description: `${domainRoot} has been added successfully.`,
+        });
+        
+        // Clear the input field after successful submission
+        setDomainRoot("");
+      } catch (error) {
+        toast.error("Error", {
+          description: "Failed to add domain. Please try again.",
+        });
+      } finally {
+        setIsPending(false);
       }
-    );
+    }, 800); // Simulate network delay
   };
 
   return (
@@ -81,16 +91,16 @@ export function DomainRootForm() {
         value={domainRoot}
         onChange={(e) => setDomainRoot(e.target.value)}
         className="max-w-xs bg-background/50"
-        disabled={createDomainMutation.isPending}
+        disabled={isPending}
       />
       <Button 
         type="submit" 
         size="sm" 
         className="flex items-center gap-1"
-        disabled={createDomainMutation.isPending}
+        disabled={isPending}
       >
         <Plus size={16} />
-        <span>{createDomainMutation.isPending ? "Adding..." : "Add Root"}</span>
+        <span>{isPending ? "Adding..." : "Add Root"}</span>
       </Button>
     </form>
   );

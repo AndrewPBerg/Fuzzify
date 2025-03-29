@@ -50,10 +50,10 @@ enum LockPosition {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Domains", href: "/domains", icon: Globe },
-  { name: "Schedule", href: "/schedule", icon: Clock },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/demo-app", icon: LayoutDashboard },
+  { name: "Domains", href: "/demo-app/domains", icon: Globe },
+  { name: "Schedule", href: "/demo-app/schedule", icon: Clock },
+  { name: "Settings", href: "/demo-app/settings", icon: Settings },
 ];
 
 
