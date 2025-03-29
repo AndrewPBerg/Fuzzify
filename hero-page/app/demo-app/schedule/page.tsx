@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Calendar, Clock, RefreshCw } from "lucide-react";
+import { DEMO_DOMAIN_ROOTS } from "@/lib/demo-data/domain";
+import { DEMO_SCHEDULES, Schedule } from "@/lib/demo-data/schedules";
 
 const scheduleOptions = [
   { id: "hourly", label: "Hourly", icon: Clock },
@@ -15,14 +17,12 @@ export default function SchedulePage() {
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState("daily");
   const [customHours, setCustomHours] = useState(24);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
 
   useEffect(() => {
-    const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    setDomainRoots(storedRoots);
-    
-    const storedSchedules = JSON.parse(localStorage.getItem("domainSchedules") || "[]");
-    setSchedules(storedSchedules);
+    // Use our static demo data instead of localStorage
+    setDomainRoots(DEMO_DOMAIN_ROOTS.map(domain => domain.name));
+    setSchedules(DEMO_SCHEDULES);
   }, []);
 
   const handleDomainToggle = (domain: string) => {
@@ -41,18 +41,17 @@ export default function SchedulePage() {
       return;
     }
     
-    const newSchedule = {
+    const newSchedule: Schedule = {
       id: Date.now().toString(),
       domains: selectedDomains,
-      type: scheduleType,
+      type: scheduleType as "hourly" | "daily" | "weekly" | "custom",
       customHours: scheduleType === "custom" ? customHours : null,
       createdAt: new Date().toISOString(),
       nextRun: getNextRunTime(scheduleType, customHours),
+      userId: "demo-user-1"
     };
     
-    const updatedSchedules = [...schedules, newSchedule];
-    localStorage.setItem("domainSchedules", JSON.stringify(updatedSchedules));
-    setSchedules(updatedSchedules);
+    setSchedules(prev => [...prev, newSchedule]);
     setSelectedDomains([]);
   };
 
@@ -78,9 +77,7 @@ export default function SchedulePage() {
   };
 
   const deleteSchedule = (id: string) => {
-    const updatedSchedules = schedules.filter(schedule => schedule.id !== id);
-    localStorage.setItem("domainSchedules", JSON.stringify(updatedSchedules));
-    setSchedules(updatedSchedules);
+    setSchedules(prev => prev.filter(schedule => schedule.id !== id));
   };
 
   return (

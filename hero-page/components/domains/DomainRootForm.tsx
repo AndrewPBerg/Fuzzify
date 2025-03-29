@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { userStorage } from "@/lib/demo-data/user";
-import domainsData from "@/lib/demo-data/domains";
+import { DEMO_DOMAIN_ROOTS } from "@/lib/demo-data/domain";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -47,10 +46,9 @@ export function DomainRootForm() {
       return;
     }
     
-    // Check if domain already exists in demo data
-    const existingDomains = domainsData.domains;
-    const domainExists = existingDomains.some(
-      domain => domain.domain_name.toLowerCase() === domainRoot.toLowerCase()
+    // Check if domain already exists in domain roots
+    const domainExists = DEMO_DOMAIN_ROOTS.some(
+      domain => domain.name.toLowerCase() === domainRoot.toLowerCase()
     );
     
     if (domainExists) {

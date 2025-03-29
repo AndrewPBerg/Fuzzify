@@ -117,7 +117,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Persistent Message in Bottom Left */}
       <div className="fixed bottom-3 left-3 z-50 max-w-sm p-3 text-sm bg-background/80 backdrop-blur-sm border border-border rounded-md shadow-md">
         <p className="text-muted-foreground">
-          You are viewing a static version of the Fuzzify web app. If you would like the most up to date features, interface, and full functionality visit: <a href="https://github.com/AndrewPBerg/Fuzzify" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">github.com/AndrewPBerg/Fuzzify</a> to run locally.
+          You are viewing the static version of the Fuzzify web app. If you would like the most up to date features, interface, and full functionality visit: <a href="https://github.com/AndrewPBerg/Fuzzify" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">github.com/AndrewPBerg/Fuzzify</a> to run locally.
         </p>
       </div>
     </div>

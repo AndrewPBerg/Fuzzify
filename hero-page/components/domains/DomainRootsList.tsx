@@ -3,16 +3,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2, Play } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { userStorage } from "@/lib/demo-data/user";
-import domainsData from "@/lib/demo-data/domains";
+import { useToast } from "@/components/ui/use-toast";
+import { DEMO_DOMAIN_ROOTS } from "@/lib/demo-data/domain";
 import { toast as sonnerToast } from "sonner";
 
 export function DomainRootsList() {
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const currentUser = userStorage.getCurrentUser();
   const [isPendingDelete, setIsPendingDelete] = useState<string | null>(null);
   const [isPendingGenerate, setIsPendingGenerate] = useState<string | null>(null);
 
@@ -23,8 +21,7 @@ export function DomainRootsList() {
       
       try {
         // Get domains from demo data
-        const domains = domainsData.getDomainsByUserId(currentUser.user_id);
-        const domainNames = domains.map(domain => domain.domain_name);
+        const domainNames = DEMO_DOMAIN_ROOTS.map(domain => domain.name);
         
         // Set the domain roots
         setDomainRoots(domainNames);
@@ -36,7 +33,7 @@ export function DomainRootsList() {
     };
     
     loadDomains();
-  }, [currentUser.user_id]);
+  }, []);
 
   const handleDeleteRoot = async (root: string) => {
     setIsPendingDelete(root);

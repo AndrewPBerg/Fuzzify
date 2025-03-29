@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { userStorage } from "@/lib/demo-data/user";
+import { DEMO_DOMAIN_ROOTS } from "@/lib/demo-data/domain";
 import domainsData, { Permutation } from "@/lib/demo-data/domains";
 
 // Define domain interface
@@ -50,15 +50,11 @@ export function DomainTable() {
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
-  // Get current user from userStorage
-  const currentUser = userStorage.getCurrentUser();
-  
   // Load domain roots
   useEffect(() => {
     try {
       // Get domains from demo data
-      const domains = domainsData.getDomainsByUserId(currentUser.user_id);
-      const domainNames = domains.map(domain => domain.domain_name);
+      const domainNames = DEMO_DOMAIN_ROOTS.map(domain => domain.name);
       
       // Set domain roots
       setDomainRoots(domainNames);
@@ -73,7 +69,7 @@ export function DomainTable() {
         description: "Failed to load domain roots",
       });
     }
-  }, [currentUser.user_id, selectedDomainRoot]);
+  }, [selectedDomainRoot]);
 
   // Load permutations when selectedDomainRoot changes
   useEffect(() => {
