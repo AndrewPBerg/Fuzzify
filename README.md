@@ -1,7 +1,7 @@
 
 <!-- Start of Selection -->
 <p align="center">
-  <img src="Fluffify_logo.png" alt="Fuzzify Logo" width="200">
+  <img src="Fuzzify_logo.png" alt="Fuzzify Logo" width="200">
 </p>
 <!-- End of Selection -->
 
