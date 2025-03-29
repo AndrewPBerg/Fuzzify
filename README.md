@@ -5,7 +5,7 @@
 </p>
 
 <!-- Fuzzify Text start -->
-<link href="https://fonts.googleapis.com/css2?family=Aclonica&display=swap" rel="stylesheet">
+
 <h1 align="center" style="font-weight: bold; font-size: 3rem;">
   <span style="background: linear-gradient(to right, #14B8A6, #6366F1); 
   -webkit-background-clip: text; 
@@ -21,17 +21,22 @@
 
 <!-- End of Selection -->
 
-<!-- Deployment Status Badges -->
-<!-- ![Deployment Status](https://img.shields.io/github/workflow/status/AndrewPBerg/Fuzzify/deploy?label=deployment) -->
-<!-- You can also use service-specific badges like: -->
-<!-- ![Vercel](https://img.shields.io/github/deployments/AndrewPBerg/Fuzzify/Production?label=vercel&logo=vercel) -->
-<!-- ![Netlify](https://img.shields.io/netlify/your-netlify-app-id?logo=netlify) -->
 
 <!-- add shield icos -->
 
-![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
-![GitHub stars](https://img.shields.io/github/stars/AndrewPBerg/Fuzzify?style=social)
-![GitHub forks](https://img.shields.io/github/forks/AndrewPBerg/Fuzzify?style=social)
+<!-- Start of Selection -->
+<p align="center">
+  <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+  <img src="https://img.shields.io/github/stars/AndrewPBerg/Fuzzify?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/forks/AndrewPBerg/Fuzzify?style=social" alt="GitHub forks">
+  <!-- Deployment Status Badges -->
+   <!-- ![Deployment Status](https://img.shields.io/github/workflow/status/AndrewPBerg/Fuzzify/deploy?label=deployment) -->
+   <!-- You can also use service-specific badges like: -->
+   <!-- ![Vercel](https://img.shields.io/github/deployments/AndrewPBerg/Fuzzify/Production?label=vercel&logo=vercel) -->
+   <!-- ![Netlify](https://img.shields.io/netlify/your-netlify-app-id?logo=netlify) -->
+
+</p>
+<!-- End of Selection -->
 
 
 
