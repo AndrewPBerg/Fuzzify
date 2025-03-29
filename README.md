@@ -1,10 +1,15 @@
-Author: Andrew P. Berg
-Created: 2/15/2025
-Edited: 2/16/2025
 
-# DNSTwist Testing Project
+<!-- Start of Selection -->
+<p align="center">
+  <img src="Fluffify_logo.png" alt="Fuzzify Logo" width="200">
+</p>
+<!-- End of Selection -->
 
-A full-stack application for DNS fuzzing and monitoring using DNSTwist, Flask, Next.js, and Docker.
+<!-- add shield icos -->
+
+# Fuzzify
+
+A full-stack application for DNS fuzzing and monitoring domain impersontations
 
 ## Prerequisites
 
