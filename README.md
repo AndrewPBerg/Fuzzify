@@ -1,4 +1,3 @@
-<!-- Start of Selection -->
 <p align="center">
   <img src="logo.svg" alt="Fuzzify Logo" width="300" style="display:inline-block;">
 
@@ -7,28 +6,14 @@
 <p align="center" style="font-size: 1.25rem; margin-top: 0.5rem; color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px;">
   Secure your domain and monitor domain impersonations
 </p>
-<!-- End of Selection -->
 
-
-<!-- add shield icos -->
-
-<!-- Start of Selection -->
 <p align="center">
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
   <img src="https://img.shields.io/github/stars/AndrewPBerg/Fuzzify?style=social" alt="GitHub stars">
-  <!-- <img src="https://img.shields.io/github/forks/AndrewPBerg/Fuzzify?style=social" alt="GitHub forks"> -->
-  <!-- Deployment Status Badges -->
-   <!-- ![Deployment Status](https://img.shields.io/github/workflow/status/AndrewPBerg/Fuzzify/deploy?label=deployment) -->
-   <!-- You can also use service-specific badges like: -->
-   <!-- ![Vercel](https://img.shields.io/github/deployments/AndrewPBerg/Fuzzify/Production?label=vercel&logo=vercel) -->
-   <!-- ![Netlify](https://img.shields.io/netlify/your-netlify-app-id?logo=netlify) -->
+  <a href="https://fuzzify-jade.vercel.app"><img src="https://img.shields.io/badge/vercel-deployed-brightgreen?logo=vercel" alt="Vercel"></a>
 
 </p>
-<!-- End of Selection -->
 
-
-
-<!-- Start of Selection -->
 
 ## Installation 🏗️
 
