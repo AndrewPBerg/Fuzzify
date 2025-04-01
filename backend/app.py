@@ -446,7 +446,6 @@ def domain_route(user_id):
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def permutations_route(user_id, domain_name):
-    """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
     if request.method == 'POST':
         if DEBUG:
             logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
@@ -456,7 +455,6 @@ def permutations_route(user_id, domain_name):
             if not user:
                 return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
-            # Check if domain exists; add it if it doesn't
             domain_obj = session.get(Domain, domain_name)
             if not domain_obj:
                 domain_obj = Domain(domain_name=domain_name, user_id=user.user_id)
@@ -464,20 +462,19 @@ def permutations_route(user_id, domain_name):
                 session.commit()
                 logger.debug(f"Added new domain: {domain_name}")
 
-            # Call dnstwist to generate permutations
+            # Run dnstwist scan
             try:
                 result = subprocess.run(
                     ["python", "-m", "dnstwist", "--format", "json", domain_name],
-                    capture_output=True,
-                    text=True,
-                    check=True
+                    capture_output=True, text=True, check=True
                 )
                 generated_permutations = json.loads(result.stdout)
             except Exception as e:
                 logger.error(f" Error running dnstwist: {e}")
                 return jsonify({"error": "Failed to generate permutations."}), 500
 
-            # Store permutations
+            # Save permutations to DB
+            stored_permutations = []
             for entry in generated_permutations:
                 perm = Permutation(
                     permutation_name=entry['domain'],
@@ -488,25 +485,25 @@ def permutations_route(user_id, domain_name):
                     ip_address=', '.join(entry.get('dns_a', [])) if isinstance(entry.get('dns_a'), list) else entry.get('dns_a')
                 )
                 session.add(perm)
+                stored_permutations.append(entry['domain'])
 
             session.commit()
 
+            #  **NEW:** Publish results to Pub/Sub for further processing
+            try:
+                message_payload = json.dumps({
+                    "user_id": user_id,
+                    "domain_name": domain_name,
+                    "permutations": stored_permutations
+                })
+                future = publisher.publish(topic_path, message_payload.encode('utf-8'))
+                msg_id = future.result()
+                logger.info(f"Published scan results to Pub/Sub with message ID: {msg_id}")
+            except Exception as e:
+                logger.error(f"Failed to publish results to Pub/Sub: {e}")
+
         return jsonify({"message": "Permutations generated and added to database"}), 201
 
-
-        return jsonify({"message": "Permutations generated and added to database"}), 201
-
-    elif request.method == 'GET':
-        if DEBUG:
-            logger.debug(f"Received request to fetch permutations for {domain_name}.")
-
-        with Session(engine) as session:
-            permutations = session.exec(select(Permutation).where(Permutation.domain_name == domain_name)).all()
-
-        if not permutations:
-            return jsonify({"message": "No permutations found for this domain."}), 404
-
-        return jsonify([perm.model_dump() for perm in permutations])
 
 
 # ------------------------- Startup Sequence -------------------------
