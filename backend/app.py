@@ -88,87 +88,89 @@ def drop_all_tables():
         logger.error(f"Error dropping tables: {e}")
         raise
 
-# # ------------------------- Pub/Sub Configuration -------------------------
 
-# os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
-# os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "our-project")
 
-# # Pub/Sub Clients
-# publisher = pubsub_v1.PublisherClient()
-# subscriber = pubsub_v1.SubscriberClient()
+# ------------------------- Pub/Sub Configuration -------------------------
 
-# # Topic and Subscription Names
-# project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
-# topic_name = "frontend-to-backend"
-# subscription_name = "backend-sub"
+os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "pubsub:8085")
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "local-project")
 
-# # Topic & Subscription Paths
-# topic_path = publisher.topic_path(project_id, topic_name)
-# subscription_path = subscriber.subscription_path(project_id, subscription_name)
+# Pub/Sub Clients
+publisher = pubsub_v1.PublisherClient()
+subscriber = pubsub_v1.SubscriberClient()
 
-# # Ensure Pub/Sub Topic Exists
-# def ensure_topic():
-#     try:
-#         topics = [t.name for t in publisher.list_topics(request={"project": f"projects/{project_id}"})]
-#         if topic_path not in topics:
-#             publisher.create_topic(request={"name": topic_path})
-#             logger.info(f"✅ Topic {topic_name} created.")
-#         else:
-#             logger.info(f"⚠️ Topic {topic_name} already exists.")
-#     except Exception as e:
-#         logger.error(f"❌ Error creating topic: {e}")
+# Topic and Subscription Names
+project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+topic_name = "frontend-to-backend"
+subscription_name = "backend-sub"
 
-# # Ensure Pub/Sub Subscription Exists
-# def ensure_subscription():
-#     try:
-#         subscriptions = [s.name for s in subscriber.list_subscriptions(request={"project": f"projects/{project_id}"})]
-#         if subscription_path not in subscriptions:
-#             subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
-#             logger.info(f"✅ Subscription {subscription_name} created.")
-#         else:
-#             logger.info(f"⚠️ Subscription {subscription_name} already exists.")
-#     except Exception as e:
-#         logger.error(f"❌ Error creating subscription: {e}")
+# Topic & Subscription Paths
+topic_path = publisher.topic_path(project_id, topic_name)
+subscription_path = subscriber.subscription_path(project_id, subscription_name)
 
-# @app.route('/publish-message', methods=['POST'])
-# def publish_message():
-#     """Publishes a message from frontend to backend via Pub/Sub."""
-#     data = request.json
-#     if not data or "message" not in data:
-#         return jsonify({"error": "Message field is required"}), 400
+# Ensure Pub/Sub Topic Exists
+def ensure_topic():
+    try:
+        topics = [t.name for t in publisher.list_topics(request={"project": f"projects/{project_id}"})]
+        if topic_path not in topics:
+            publisher.create_topic(request={"name": topic_path})
+            logger.info(f"✅ Topic {topic_name} created.")
+        else:
+            logger.info(f"⚠️ Topic {topic_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating topic: {e}")
 
-#     message_data = data["message"].encode("utf-8")
+# Ensure Pub/Sub Subscription Exists
+def ensure_subscription():
+    try:
+        subscriptions = [s.name for s in subscriber.list_subscriptions(request={"project": f"projects/{project_id}"})]
+        if subscription_path not in subscriptions:
+            subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
+            logger.info(f"✅ Subscription {subscription_name} created.")
+        else:
+            logger.info(f"⚠️ Subscription {subscription_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating subscription: {e}")
 
-#     try:
-#         future = publisher.publish(topic_path, message_data)
-#         msg_id = future.result()
-#         logger.info(f"Published message: {msg_id}")
-#         return jsonify({"message": "Message published", "msg_id": msg_id})
-#     except Exception as e:
-#         logger.error(f"Error publishing message: {e}")
-#         return jsonify({"error": str(e)}), 500
+@app.route('/publish-message', methods=['POST'])
+def publish_message():
+    """Publishes a message from frontend to backend via Pub/Sub."""
+    data = request.json
+    if not data or "message" not in data:
+        return jsonify({"error": "Message field is required"}), 400
 
-# def callback(message):
-#     try:
-#         message_data = message.data.decode("utf-8")
-#         logger.info(f"📩 Received message: {message_data}")
-#         message.ack()
-#     except Exception as e:
-#         logger.error(f"Error processing message: {e}")
+    message_data = data["message"].encode("utf-8")
 
-# def start_subscriber():
-#     def run():
-#         while True:
-#             try:
-#                 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-#                 logger.info("🔄 Listening for messages on subscription...")
-#                 streaming_pull_future.result()
-#             except Exception as e:
-#                 logger.error(f"Subscriber error: {e}")
-#                 time.sleep(5)
+    try:
+        future = publisher.publish(topic_path, message_data)
+        msg_id = future.result()
+        logger.info(f"Published message: {msg_id}")
+        return jsonify({"message": "Message published", "msg_id": msg_id})
+    except Exception as e:
+        logger.error(f"Error publishing message: {e}")
+        return jsonify({"error": str(e)}), 500
 
-#     thread = threading.Thread(target=run, daemon=True)
-#     thread.start()
+def callback(message):
+    try:
+        message_data = message.data.decode("utf-8")
+        logger.info(f"📩 Received message: {message_data}")
+        message.ack()
+    except Exception as e:
+        logger.error(f"Error processing message: {e}")
+
+def start_subscriber():
+    def run():
+        while True:
+            try:
+                streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+                logger.info("🔄 Listening for messages on subscription...")
+                streaming_pull_future.result()
+            except Exception as e:
+                logger.error(f"Subscriber error: {e}")
+                time.sleep(5)
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
 
 # ------------------------- API Endpoints -------------------------
 
@@ -519,7 +521,7 @@ if __name__ == '__main__':
             logger.error(f"Error dropping tables: {e}")
     
     create_db_and_tables()
-    # ensure_topic()
-    # ensure_subscription()
-    # start_subscriber()
+    ensure_topic()
+    ensure_subscription()
+    start_subscriber()
     app.run(host='0.0.0.0', port=8000, debug=True)
