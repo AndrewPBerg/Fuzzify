@@ -8,7 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ExternalLink, Play, Shield, AlertTriangle, BarChart3 } from "lucide-react"
 import Link from "next/link"
 
-export default function DemoSection() {
+interface DemoSectionProps {
+  id?: string
+}
+
+export default function DemoSection({ id }: DemoSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const subheadingRef = useRef<HTMLParagraphElement>(null)
@@ -128,7 +132,7 @@ export default function DemoSection() {
   }, [])
 
   return (
-    <div ref={sectionRef} className="py-20 md:py-32 px-6 md:px-10">
+    <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
         <h2 ref={headingRef} className="text-3xl md:text-4xl font-bold text-center mb-6 text-white">
           Try <span className="font-aclonica">Fuzzify</span>

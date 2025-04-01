@@ -6,7 +6,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, AlertTriangle, BarChart3 } from "lucide-react"
 
-export default function AboutSection() {
+interface AboutSectionProps {
+  id?: string
+}
+
+export default function AboutSection({ id }: AboutSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const mainCardRef = useRef<HTMLDivElement>(null)
@@ -157,7 +161,7 @@ export default function AboutSection() {
   }, [])
 
   return (
-    <div ref={sectionRef} className="py-16 sm:py-20 md:py-32 px-4 sm:px-6 md:px-10" id="about">
+    <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
         <h2 ref={titleRef} className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 text-white">
           About <span className="font-aclonica">Fuzzify</span>

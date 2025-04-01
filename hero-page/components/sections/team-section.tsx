@@ -20,7 +20,11 @@ interface TeamMember {
   }
 }
 
-export default function TeamSection() {
+interface TeamSectionProps {
+  id?: string
+}
+
+export default function TeamSection({ id }: TeamSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const subtitleRef = useRef<HTMLParagraphElement>(null)
@@ -209,7 +213,7 @@ export default function TeamSection() {
   ]
 
   return (
-    <div ref={sectionRef} className="py-20 md:py-32 px-6 md:px-10">
+    <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
         <h2 ref={titleRef} className="text-3xl md:text-4xl font-bold text-center mb-6 text-white">
           Our Experts

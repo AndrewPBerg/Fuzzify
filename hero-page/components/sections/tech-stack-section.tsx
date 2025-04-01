@@ -6,7 +6,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-export default function TechStackSection() {
+interface TechStackSectionProps {
+  id?: string
+}
+
+export default function TechStackSection({ id }: TechStackSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const cardsRef = useRef<HTMLDivElement>(null)
@@ -166,6 +170,7 @@ export default function TechStackSection() {
   return (
     <div 
       ref={sectionRef} 
+      id={id}
       className="py-20 md:py-32 px-6 md:px-10 relative"
     >
       <div className="max-w-7xl mx-auto">

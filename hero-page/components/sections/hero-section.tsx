@@ -8,9 +8,13 @@ import { Shield } from "lucide-react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  id?: string
+}
+
+export default function HeroSection({ id }: HeroSectionProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const subheadingRef = useRef<HTMLParagraphElement>(null)
   const ctaRef = useRef<HTMLDivElement>(null)
@@ -127,11 +131,7 @@ export default function HeroSection() {
   }, [isMounted])
 
   return (
-    <section 
-      ref={sectionRef} 
-      className="min-h-[90vh] sm:min-h-screen flex flex-col justify-center pt-20 pb-10 px-4 sm:px-6 md:px-10 relative overflow-hidden"
-      id="hero"
-    >
+    <div ref={sectionRef} id={id} className="min-h-[90vh] sm:min-h-screen flex flex-col justify-center pt-20 pb-10 px-4 sm:px-6 md:px-10 relative overflow-hidden">
       <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-20 items-center">
         <div className="order-2 md:order-1 mt-8 md:mt-0">
           <h1
@@ -182,7 +182,7 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
 
