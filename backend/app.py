@@ -446,7 +446,41 @@ def domain_route(user_id):
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def permutations_route(user_id, domain_name):
-    if request.method == 'POST':
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to get permutations for domain {domain_name}")
+            
+        with Session(engine) as session:
+            # Check if domain exists
+            domain = session.exec(select(Domain).where(
+                (Domain.domain_name == domain_name) & 
+                (Domain.user_id == user_id)
+            )).first()
+            
+            if not domain:
+                return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
+                
+            # Get permutations for this domain
+            permutations = session.exec(
+                select(Permutation).where(Permutation.domain_name == domain_name)
+            ).all()
+            
+            # Convert to serializable format
+            permutations_list = [
+                {
+                    "permutation_name": perm.permutation_name,
+                    "domain_name": perm.domain_name,
+                    "server": perm.server,
+                    "mail_server": perm.mail_server,
+                    "risk": perm.risk,
+                    "ip_address": perm.ip_address
+                }
+                for perm in permutations
+            ]
+            
+        return jsonify({"permutations": permutations_list}), 200
+        
+    elif request.method == 'POST':
         if DEBUG:
             logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
 

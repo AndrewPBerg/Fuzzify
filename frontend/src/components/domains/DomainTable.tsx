@@ -5,6 +5,7 @@ import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, Sh
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePermutations } from "@/lib/api/permuatations";
+import { userStorage } from "@/lib/api/users";
 
 // Define domain interface
 interface Domain {
@@ -15,6 +16,21 @@ interface Domain {
   mail_server: string | null;
   risk: boolean | null;
   ip_address: string | null;
+}
+
+// Define permutation item interface from API
+interface PermutationItem {
+  permutation_name: string;
+  domain_name: string;
+  server: string | null;
+  mail_server: string | null;
+  risk: boolean | null;
+  ip_address: string | null;
+}
+
+// Define permutations response interface
+interface PermutationsResponse {
+  permutations: PermutationItem[];
 }
 
 interface Column {
@@ -49,8 +65,8 @@ export function DomainTable() {
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
-  // Get userId from localStorage
-  const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") || "default-user" : "default-user";
+  // Get userId from userStorage
+  const { userId } = userStorage.getCurrentUser();
   
   // Use the permutations hook
   const { 
@@ -80,8 +96,14 @@ export function DomainTable() {
   // Update domains state when permutations data changes
   useEffect(() => {
     if (permutationsData) {
+      // Check if the response has a permutations property (from backend API)
+      // or if it's already an array of permutation objects
+      const permutationsArray = Array.isArray(permutationsData) 
+        ? permutationsData as PermutationItem[]
+        : (permutationsData as PermutationsResponse).permutations || [];
+      
       // Transform data to match our Domain interface
-      const transformedData = permutationsData.map((item, index) => ({
+      const transformedData = permutationsArray.map((item: PermutationItem, index: number) => ({
         id: index + 1,
         permutation_name: item.permutation_name,
         domain_name: item.domain_name,

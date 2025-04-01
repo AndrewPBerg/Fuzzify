@@ -21,7 +21,9 @@ const fetchPermutations = async ({ userId, domainName }: { userId: string, domai
     throw new Error(errorData.message || "Failed to fetch permutations");
   }
   
-  return response.json();
+  const data = await response.json();
+  // Handle both direct array responses and responses with a permutations property
+  return Array.isArray(data) ? data : data.permutations || [];
 };
 
 const generatePermutations = async ({ userId, domainName }: { userId: string, domainName: string }): Promise<{ message: string }> => {
