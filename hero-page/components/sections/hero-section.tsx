@@ -153,13 +153,6 @@ export default function HeroSection() {
             ref={ctaRef} 
             className="mt-6 sm:mt-8 md:mt-10 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4"
           >
-            <button className="bg-white text-[#17345A] px-6 py-3 rounded-full font-medium hover:bg-white/90 transition-colors flex items-center justify-center sm:justify-start gap-2">
-              <Shield className="w-5 h-5" />
-              Start Domain Protection
-            </button>
-            <button className="bg-transparent border border-white/30 text-white px-6 py-3 rounded-full font-medium hover:bg-white/10 transition-colors">
-              View Threat Scale
-            </button>
           </div>
         </div>
 
