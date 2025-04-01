@@ -167,45 +167,43 @@ export default function TeamSection() {
 
   const team: TeamMember[] = [
     {
-      name: "TODO",
-      role: "TODO",
-      avatar: "TODO",
+      name: "Andrew Berg",
+      role: "B.A. Computer Science",
+      avatar: "andrew-fuzzify-team.jpg",
       bio: "TODO",
       social: {
-        github: "TODO",
-        twitter: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/AndrewPBerg",
+        linkedin: "https://www.linkedin.com/in/andrew-berg-0822132b2/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
-      avatar: "TODO",
+      name: "Mia Glover",
+      role: "B.S. Data Science",
+      avatar: "mia-fuzzify-team.jpg",
       bio: "TODO",
       social: {
-        github: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/miahamm44",
+        linkedin: "https://www.linkedin.com/in/mia-glover-3222ba24b/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
+      name: "Joeseph Heindel",
+      role: "B.A. Computer Science",
       avatar: "TODO",
       bio: "TODO",
       social: {
-        github: "TODO",
-        twitter: "TODO",
+        github: "https://github.com/jheindel525",
+        linkedin: "https://www.linkedin.com/in/heindeljah/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
+      name: "Laura Zalewska",
+      role: "B.S. Computer Science",
       avatar: "TODO",
       bio: "TODO",
       social: {
-        github: "TODO",
-        twitter: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/laurazal",
+        linkedin: "https://www.linkedin.com/in/laura-zalewska-3b0410304/",
       },
     },
   ]
