@@ -46,81 +46,72 @@ export default function DemoHomePage() {
           </p>
         </div>
         <Link href="/demo-app/domains/add">
-          <Button>Add New Domain</Button>
+          <Button>Add New Domains</Button>
         </Link>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <Link href="/demo-app/domains">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>Domains</span>
-                <span className="text-sm font-normal text-muted-foreground">({domains.length})</span>
-              </CardTitle>
-              <CardDescription>Active domains under monitoring</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{domains.length}</div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {loading ? "Loading..." : "Click to view all domains"}
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>Domains</span>
+              <span className="text-sm font-normal text-muted-foreground">({domains.length})</span>
+            </CardTitle>
+            <CardDescription>Active domains under monitoring</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{domains.length}</div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {loading ? "Loading..." : "Active domains"}
+            </p>
+          </CardContent>
+        </Card>
         
-        <Link href="/demo-app/permutations">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>Permutations</span>
-                <span className="text-sm font-normal text-muted-foreground">({permutations.length})</span>
-              </CardTitle>
-              <CardDescription>Potential impersonation attempts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">High Risk:</span>
-                  <span className="text-rose-500 font-medium">{highRiskCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Low Risk:</span>
-                  <span className="text-emerald-500 font-medium">{lowRiskCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Unknown:</span>
-                  <span className="text-blue-500 font-medium">{unknownRiskCount}</span>
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>Permutations</span>
+              <span className="text-sm font-normal text-muted-foreground">({permutations.length})</span>
+            </CardTitle>
+            <CardDescription>Potential impersonation attempts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">High Risk:</span>
+                <span className="text-rose-500 font-medium">{highRiskCount}</span>
               </div>
-            </CardContent>
-          </Card>
-        </Link>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Low Risk:</span>
+                <span className="text-emerald-500 font-medium">{lowRiskCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Unknown:</span>
+                <span className="text-blue-500 font-medium">{unknownRiskCount}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
-        <Link href="/demo-app/domains/high-risk">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>High Risk Sites</span>
-                <span className="text-sm font-normal text-muted-foreground">({highRiskDomains.length})</span>
-              </CardTitle>
-              <CardDescription>Domains requiring immediate attention</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-rose-500">{highRiskDomains.length}</div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {highRiskDomains.length > 0 
-                  ? `Click to review ${highRiskDomains.length} high-risk domain${highRiskDomains.length !== 1 ? 's' : ''}`
-                  : "No high-risk domains detected"}
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>High Risk Sites</span>
+              <span className="text-sm font-normal text-muted-foreground">({highRiskDomains.length})</span>
+            </CardTitle>
+            <CardDescription>Domains requiring immediate attention</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-rose-500">{highRiskDomains.length}</div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {highRiskDomains.length > 0 
+                ? `${highRiskDomains.length} high-risk domain${highRiskDomains.length !== 1 ? 's' : ''}`
+                : "No high-risk domains detected"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
       
-      <div className="flex justify-between items-center mt-8">
-        <h2 className="text-2xl font-bold">Recent Domains</h2>
-      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
         <div className="h-[600px]">
