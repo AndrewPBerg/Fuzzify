@@ -1,21 +1,22 @@
+version: "3.9"
+
 services:
   backend:
     build:
       context: backend
       dockerfile: Dockerfile
     ports:
-      - "10001:8000"  # Ensure backend listens on correct port
+      - "10001:8000"
     volumes:
-      - ./backend:/app  # App code only — init.sql removed
+      - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
       pubsub:
         condition: service_started
+    env_file:
+      - ./backend/.env  # 👈 Load env vars from backend/.env
     environment:
-      DB_URL: "mysql+mysqlconnector://user:password@db:3306/dnstwist_db"
-      PUBSUB_EMULATOR_HOST: "pubsub:8085"
-      PUBSUB_PROJECT_ID: "local-project"
       PYTHONUNBUFFERED: 1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api"]
@@ -43,7 +44,6 @@ services:
       NODE_ENV: "development"
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_API_URL: "http://localhost:10001"
-      # Hot reloading configuration
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       WDS_SOCKET_HOST: "127.0.0.1"
@@ -52,7 +52,7 @@ services:
       - app-network
 
   db:
-    image: mysql:8.0  # Ensure MySQL is version 8.0
+    image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -85,22 +85,22 @@ services:
     build:
       context: ./hero-page
       dockerfile: Dockerfile
-      target: builder  # Use the builder stage for development
+      target: builder
     ports:
       - "10003:10003"
     volumes:
       - ./hero-page:/app
-      - /app/node_modules  # This tells Docker to use the container's node_modules
-      - /app/.next  # This tells Docker to use the container's .next directory
+      - /app/node_modules
+      - /app/.next
     command: ["pnpm", "dev"]
     environment:
       NODE_ENV: "development"
       NEXT_TELEMETRY_DISABLED: "1"
-      # Hot reloading configuration
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
     networks:
       - app-network
+
 volumes:
   mysql_data:
 

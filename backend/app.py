@@ -19,6 +19,8 @@ DROP_TABLES = False
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.WARNING)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
@@ -92,10 +94,10 @@ def drop_all_tables():
 
 # ------------------------- Pub/Sub Configuration -------------------------
 
-os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "pubsub:8085")
-os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "local-project")
+os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "your-project-id")
 
-# Pub/Sub Clients
+# Initialize Pub/Sub clients
 publisher = pubsub_v1.PublisherClient()
 subscriber = pubsub_v1.SubscriberClient()
 
