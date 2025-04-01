@@ -181,7 +181,7 @@ export default function AboutSection({ id }: AboutSectionProps) {
             <CardContent>
               {/* what is fuzzify text body */}
               <p className="text-base sm:text-lg leading-relaxed text-white/80">
-                TODO  
+                Fuzzify is a powerful domain security platform that helps organizations protect their digital assets from domain impersonation attacks. Our advanced DNS fuzzing engine systematically identifies and analyzes potential lookalike domains that could be used for phishing, brand impersonation, or other malicious purposes. By continuously monitoring domain variations and providing detailed risk assessments, Fuzzify empowers security teams to proactively defend their brand's digital presence.
               </p>
             </CardContent>
           </Card>
@@ -200,19 +200,19 @@ export default function AboutSection({ id }: AboutSectionProps) {
                 <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
+                    <span>Character substitution detection (e.g., amaz0n.com, g00gle.com)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
+                    <span>Homograph detection using Unicode characters</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., google-login.com)</span>
+                    <span>Domain prefix/suffix manipulation (e.g., google-login.com)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., google-login.com)</span>
+                    <span>Typosquatting and keyboard layout variations</span>
                   </li>
                 </ul>
               </CardContent>
@@ -230,19 +230,19 @@ export default function AboutSection({ id }: AboutSectionProps) {
                 <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>Real-time DNS and SSL certificate analysis</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>Web server and mail server fingerprinting</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>IP reputation and geolocation tracking</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>Automated threat classification and risk assessment</span>
                   </li>
                 </ul>
               </CardContent>

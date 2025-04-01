@@ -139,7 +139,7 @@ export default function HeroSection({ id }: HeroSectionProps) {
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
           >
             <GradientText className="font-aclonica">Fuzzify</GradientText>
-            <span className="text-white block mt-2">Secure Digital Identity Protection</span>
+            <span className="text-white block mt-2">Find Your Domain Doppelgänger</span>
           </h1>
           <p
             ref={subheadingRef}
