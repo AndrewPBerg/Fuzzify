@@ -525,20 +525,22 @@ def permutations_route(user_id, domain_name):
 
             session.commit()
 
-            #  **NEW:** Publish results to Pub/Sub for further processing
-            try:
-                message_payload = json.dumps({
+            # ✅ NEW: One message per permutation, includes ip_address only
+            for entry in generated_permutations:
+                pubsub_payload = json.dumps({
                     "user_id": user_id,
                     "domain_name": domain_name,
-                    "permutations": stored_permutations
+                    "permutation": entry['domain'],
+                    "ip_address": ', '.join(entry.get('dns_a', [])) if isinstance(entry.get('dns_a'), list) else entry.get('dns_a')
                 })
-                future = publisher.publish(topic_path, message_payload.encode('utf-8'))
-                msg_id = future.result()
-                logger.info(f"Published scan results to Pub/Sub with message ID: {msg_id}")
-            except Exception as e:
-                logger.error(f"Failed to publish results to Pub/Sub: {e}")
+                try:
+                    future = publisher.publish(topic_path, pubsub_payload.encode('utf-8'))
+                    msg_id = future.result()
+                    logger.info(f"📤 Published permutation '{entry['domain']}' with msg ID: {msg_id}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to publish permutation '{entry['domain']}': {e}")
 
-        return jsonify({"message": "Permutations generated and added to database"}), 201
+            return jsonify({"message": "Permutations generated and added to database"}), 201
 
 @app.route('/api/schedule', methods=['POST'])
 def schedule_domain():
