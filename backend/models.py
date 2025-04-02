@@ -3,10 +3,6 @@ from typing import Optional
 from datetime import datetime
 from uuid import uuid4
 
-
-
-
-
 class User(SQLModel, table=True):
     __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
@@ -33,3 +29,11 @@ class Permutation(SQLModel, table=True):
     mail_server: Optional[str] = Field(default=None)  # Mail server for variation
     risk: Optional[bool] = Field(default=None)  # High risk? True/False
     ip_address: Optional[str] = Field(default=None)  # Associated IP address
+
+# Schedule Table
+class Schedule(SQLModel, table=True):
+    schedule_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: str = Field(foreign_key="user.user_id")  # Links to User
+    domain_name: str = Field(foreign_key="domain.domain_name")  # Links to Domain
+    schedule_date: datetime = Field()  # Date and time of the scheduled task
+    status: str = Field(default="pending")  # Task status (pending, completed, failed)
