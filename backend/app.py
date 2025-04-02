@@ -448,7 +448,41 @@ def domain_route(user_id):
 
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def permutations_route(user_id, domain_name):
-    if request.method == 'POST':
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to get permutations for domain {domain_name}")
+            
+        with Session(engine) as session:
+            # Check if domain exists
+            domain = session.exec(select(Domain).where(
+                (Domain.domain_name == domain_name) & 
+                (Domain.user_id == user_id)
+            )).first()
+            
+            if not domain:
+                return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
+                
+            # Get permutations for this domain
+            permutations = session.exec(
+                select(Permutation).where(Permutation.domain_name == domain_name)
+            ).all()
+            
+            # Convert to serializable format
+            permutations_list = [
+                {
+                    "permutation_name": perm.permutation_name,
+                    "domain_name": perm.domain_name,
+                    "server": perm.server,
+                    "mail_server": perm.mail_server,
+                    "risk": perm.risk,
+                    "ip_address": perm.ip_address
+                }
+                for perm in permutations
+            ]
+            
+        return jsonify({"permutations": permutations_list}), 200
+        
+    elif request.method == 'POST':
         if DEBUG:
             logger.debug(f"Received request to add permutations for user {user_id}, domain {domain_name}.")
 
@@ -561,7 +595,34 @@ def schedule_domain():
         "domain_name": domain_name,
         "schedule_date": schedule_date
     }), 201
+@app.route('/api/<user_id>/permutations-count', methods=['GET'])
+def count_user_permutations(user_id):
+    """API endpoint to count the number of permutations for a user."""
+    if DEBUG:
+        logger.debug(f"Received request to count permutations for user: {user_id}")
 
+    with Session(engine) as session:
+        # Check if user exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get all domains for the user
+        user_domains = session.exec(
+            select(Domain.domain_name).where(Domain.user_id == user_id)
+        ).all()
+
+        if not user_domains:
+            return jsonify({"count": 0}), 200
+
+        # Count permutations for all user's domains using a subquery
+        total_count = session.exec(
+            select(text("COUNT(*)")).select_from(
+                select(Permutation).where(Permutation.domain_name.in_(user_domains))
+            )
+        ).first()
+
+        return jsonify({"count": total_count}), 200
 
 # ------------------------- Startup Sequence -------------------------
 

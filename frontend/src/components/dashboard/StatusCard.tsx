@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 
 interface StatusCardProps {
@@ -10,6 +9,7 @@ interface StatusCardProps {
     value: number;
     isPositive: boolean;
   };
+  variant?: "default" | "success" | "warning" | "danger";
   className?: string;
 }
 
@@ -19,11 +19,15 @@ export function StatusCard({
   description,
   icon,
   trend,
+  variant = "default",
   className,
 }: StatusCardProps) {
   return (
     <div className={cn(
       "glass-card p-6 rounded-xl flex flex-col gap-4 animate-scale-in",
+      variant === "success" && "bg-emerald-50/30 border-emerald-200",
+      variant === "warning" && "bg-amber-50/30 border-amber-200",
+      variant === "danger" && "bg-rose-50/30 border-rose-200",
       className
     )}>
       <div className="flex justify-between items-start">
@@ -42,7 +46,13 @@ export function StatusCard({
             </div>
           )}
         </div>
-        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+        <div className={cn(
+          "p-2 rounded-lg",
+          variant === "default" && "bg-primary/10 text-primary",
+          variant === "success" && "bg-emerald-100 text-emerald-700",
+          variant === "warning" && "bg-amber-100 text-amber-700",
+          variant === "danger" && "bg-rose-100 text-rose-700"
+        )}>
           {icon}
         </div>
       </div>
