@@ -19,6 +19,8 @@ DROP_TABLES = False
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.WARNING)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
@@ -92,10 +94,10 @@ def drop_all_tables():
 
 # ------------------------- Pub/Sub Configuration -------------------------
 
-os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "pubsub:8085")
-os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "local-project")
+os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "your-project-id")
 
-# Pub/Sub Clients
+# Initialize Pub/Sub clients
 publisher = pubsub_v1.PublisherClient()
 subscriber = pubsub_v1.SubscriberClient()
 
@@ -538,6 +540,61 @@ def permutations_route(user_id, domain_name):
 
         return jsonify({"message": "Permutations generated and added to database"}), 201
 
+@app.route('/api/schedule', methods=['POST'])
+def schedule_domain():
+    """API endpoint to schedule a domain for a user."""
+    data = request.json(silent=True)
+
+    # Validate request data
+    required_fields = ["user_id", "domain_name", "schedule_date"]
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    user_id = data["user_id"]
+    domain_name = data["domain_name"]
+    schedule_date = data["schedule_date"]
+
+    with Session(engine) as session:
+        #Check if user exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        #Check if domain exists and belongs to the user
+        domain = session.exec(
+            select(Domain).where(
+                (Domain.domain_name == domain_name) & (Domain.user_id == user_id)
+            )
+        ).first()
+        if not domain:
+            return jsonify({"error": "Domain not found or does not belong to this user"}), 404
+    
+        #Check if this domain is already scheduled
+        existing_schedule = session.exec(
+            select(Permutation).where(
+                (Permutation.domain_name == domain_name) & (Permutation.user_id == user_id)
+            )
+        ).first()
+        if existing_schedule:
+            return jsonify({
+                "message": "Domain is already scheduled",
+                "schedule_id": existing_schedule.id,
+                "schedule_date": existing_schedule.schedule_date
+            }), 200
+
+        #Insert new schedule entry
+        new_schedule = Permutation(user_id=user_id, domain_name=domain_name, schedule_date=schedule_date)
+        session.add(new_schedule)
+        session.commit()
+        session.refresh(new_schedule)
+
+    return jsonify({
+        "message": "Domain scheduled successfully",
+        "schedule_id": new_schedule.id,
+        "user_id": user_id,
+        "domain_name": domain_name,
+        "schedule_date": schedule_date
+    }), 201
 @app.route('/api/<user_id>/permutations-count', methods=['GET'])
 def count_user_permutations(user_id):
     """API endpoint to count the number of permutations for a user."""
