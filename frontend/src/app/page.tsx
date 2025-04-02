@@ -4,16 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
-import { Globe, Server, User, Shield, AlertTriangle, Settings } from "lucide-react";
+import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar } from "lucide-react";
 import { useDomains } from "@/lib/api/domains";
 import { userStorage } from "@/lib/api/users";
 import { useCountPermutations } from "@/lib/api/permuatations";
+import { useSchedules } from "@/lib/api/schedule";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   const router = useRouter();
   const { userId } = userStorage.getCurrentUser();
   const { data: domains, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
+  const { data: schedules, isLoading: schedulesLoading } = useSchedules(userId);
   
   const { data: permutationsCount } = useCountPermutations(userId);
   
@@ -23,6 +25,16 @@ export default function HomePage() {
   const handleManageDomain = (domainName: string) => {
     localStorage.setItem('selectedDomain', domainName);
     router.push('/domains');
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
   
   return (
@@ -123,9 +135,37 @@ export default function HomePage() {
             <h2 className="text-lg font-medium">Upcoming Runs</h2>
           </div>
           <div className="p-4 h-[calc(100%-4rem)]">
-            <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-              No upcoming runs scheduled
-            </div>
+            {schedulesLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : !schedules || schedules.length === 0 ? (
+              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                No upcoming runs scheduled
+              </div>
+            ) : (
+              <div className="space-y-2 h-full overflow-y-auto">
+                {schedules.map((schedule) => (
+                  <div
+                    key={schedule.schedule_id}
+                    className="flex items-center justify-between p-3 rounded-md bg-background/50 border border-border/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{schedule.domain_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {schedule.schedule_name}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Next scan: {schedule.next_scan ? formatDate(schedule.next_scan) : 'Not scheduled'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
