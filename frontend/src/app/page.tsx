@@ -6,17 +6,13 @@ import { StatusCard } from "@/components/dashboard/StatusCard";
 import { Globe, Server, User, Shield, AlertTriangle } from "lucide-react";
 import { useDomains } from "@/lib/api/domains";
 import { userStorage } from "@/lib/api/users";
+import { useCountPermutations } from "@/lib/api/permuatations";
 
 export default function HomePage() {
   const { userId } = userStorage.getCurrentUser();
   const { data: domains, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
   
-  // Calculate permutations count from domains data
-  const permutationsCount = domains?.reduce((count, domain) => {
-    // This is a placeholder. In a real app, you might want to fetch permutations
-    // count from an API or calculate it from your data store
-    return count + (domain.total_scans || 0);
-  }, 0) || 0;
+ const { data: permutationsCount } = useCountPermutations(userId);
   
   // State for alerts (dummy data for now)
   const [alertsCount] = useState<number>(3);
@@ -43,7 +39,7 @@ export default function HomePage() {
         
         <StatusCard 
           title="Permutations" 
-          value={domainsLoading ? "Loading..." : permutationsCount} 
+          value={domainsLoading ? "Loading..." : permutationsCount ?? 0} 
           icon={<Server className="h-4 w-4" />} 
           description="Total domain permutations" 
           variant="default"

@@ -26,6 +26,23 @@ const fetchPermutations = async ({ userId, domainName }: { userId: string, domai
   return Array.isArray(data) ? data : data.permutations || [];
 };
 
+const countPermutations = async ({ userId }: { userId: string }): Promise<number> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/${userId}/permutations-count`);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to fetch permutations count");
+    }
+    
+    const data = await response.json();
+    return data.count;
+  } catch (error) {
+    console.error("Error counting permutations:", error);
+    throw new Error("An error occurred while counting permutations. Please try again later.");
+  }
+};
+
 const generatePermutations = async ({ userId, domainName }: { userId: string, domainName: string }): Promise<{ message: string }> => {
   const response = await fetch(`${API_BASE_URL}/api/${userId}/${domainName}/permutations`, {
     method: "POST",
@@ -41,6 +58,17 @@ const generatePermutations = async ({ userId, domainName }: { userId: string, do
   
   return response.json();
 };
+
+
+export function useCountPermutations(userId: string) {
+  return useQuery({
+    queryKey: ["permutations-count", userId],
+    queryFn: () => countPermutations({ userId }),
+    staleTime: 300000, // Data remains fresh for 5 minutes
+    gcTime: 600000, // Keep cached data for 10 minutes
+    enabled: !!userId, // Only run query if userId is provided
+  });
+}
 
 // Query hooks
 export function usePermutations(userId: string, domainName: string) {
