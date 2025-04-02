@@ -15,12 +15,20 @@ from test_perm import generate_and_store_permutations
 
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = False 
+DROP_TABLES = False
+
+# Set up logging
+import logging
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.WARNING)
+
+# Suppress noisy Pub/Sub debug logs from external libraries
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager').setLevel(logging.INFO)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.dispatcher').setLevel(logging.INFO)
 logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
+logging.getLogger('google.cloud.pubsub_v1.publisher._batch.thread').setLevel(logging.INFO)
+logging.getLogger('google.api_core.bidi').setLevel(logging.INFO)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
