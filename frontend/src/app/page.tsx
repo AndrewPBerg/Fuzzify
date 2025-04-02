@@ -28,12 +28,12 @@ export default function HomePage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatusCard 
           title="Domains" 
           value={domainsLoading ? "Loading..." : domains?.length || 0} 
           icon={<Globe className="h-4 w-4" />} 
-          description="Total domain roots" 
+          description="Active domains under monitoring" 
           variant="default"
         />
         
@@ -41,7 +41,7 @@ export default function HomePage() {
           title="Permutations" 
           value={domainsLoading ? "Loading..." : permutationsCount ?? 0} 
           icon={<Server className="h-4 w-4" />} 
-          description="Total domain permutations" 
+          description="Potential impersonation attempts" 
           variant="default"
         />
         
@@ -49,11 +49,70 @@ export default function HomePage() {
           title="Alerts" 
           value={alertsCount} 
           icon={<AlertTriangle className="h-4 w-4" />}
-          description="Active security alerts"
+          description="Impersonations requiring attention"
           variant="warning"
         />
       </div>
 
+      {/* Domain List and Upcoming Runs */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 -mx-4 px-4 h-[calc(80vh-12rem)]">
+        {/* Domain List Card */}
+        <div className="glass-card rounded-lg shadow-sm h-full">
+          <div className="p-4 border-b border-border/50">
+            <h2 className="text-lg font-medium">Domain List</h2>
+          </div>
+          <div className="p-4 h-[calc(100%-4rem)]">
+            {domainsLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : domainsError ? (
+              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                Error loading domains
+              </div>
+            ) : domains?.length === 0 ? (
+              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                No domains added yet
+              </div>
+            ) : (
+              <div className="space-y-2 h-full overflow-y-auto">
+                {domains?.map((domain) => (
+                  <div
+                    key={domain.domain_name}
+                    className="flex items-center justify-between p-2 rounded-md bg-background/50 border border-border/50"
+                  >
+                    <span className="text-sm">{domain.domain_name}</span>
+                    <div className="flex items-center gap-2">
+                      {domain.ip_address && (
+                        <span className="text-xs text-muted-foreground">
+                          {domain.ip_address}
+                        </span>
+                      )}
+                      {domain.last_scan && (
+                        <span className="text-xs text-muted-foreground">
+                          Last scan: {new Date(domain.last_scan).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Upcoming Runs Card */}
+        <div className="glass-card rounded-lg shadow-sm h-full">
+          <div className="p-4 border-b border-border/50">
+            <h2 className="text-lg font-medium">Upcoming Runs</h2>
+          </div>
+          <div className="p-4 h-[calc(100%-4rem)]">
+            <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+              No upcoming runs scheduled
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
