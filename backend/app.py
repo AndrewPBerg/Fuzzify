@@ -538,7 +538,34 @@ def permutations_route(user_id, domain_name):
 
         return jsonify({"message": "Permutations generated and added to database"}), 201
 
+@app.route('/api/<user_id>/permutations-count', methods=['GET'])
+def count_user_permutations(user_id):
+    """API endpoint to count the number of permutations for a user."""
+    if DEBUG:
+        logger.debug(f"Received request to count permutations for user: {user_id}")
 
+    with Session(engine) as session:
+        # Check if user exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get all domains for the user
+        user_domains = session.exec(
+            select(Domain.domain_name).where(Domain.user_id == user_id)
+        ).all()
+
+        if not user_domains:
+            return jsonify({"count": 0}), 200
+
+        # Count permutations for all user's domains using a subquery
+        total_count = session.exec(
+            select(text("COUNT(*)")).select_from(
+                select(Permutation).where(Permutation.domain_name.in_(user_domains))
+            )
+        ).first()
+
+        return jsonify({"count": total_count}), 200
 
 # ------------------------- Startup Sequence -------------------------
 
