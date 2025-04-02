@@ -62,7 +62,13 @@ export function DomainTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
-  const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(null);
+  const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(() => {
+    // Initialize from localStorage if available, otherwise null
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedDomain') || null;
+    }
+    return null;
+  });
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
   
   // Get userId from userStorage

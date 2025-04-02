@@ -1,21 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
-import { Globe, Server, User, Shield, AlertTriangle } from "lucide-react";
+import { Globe, Server, User, Shield, AlertTriangle, Settings } from "lucide-react";
 import { useDomains } from "@/lib/api/domains";
 import { userStorage } from "@/lib/api/users";
 import { useCountPermutations } from "@/lib/api/permuatations";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
+  const router = useRouter();
   const { userId } = userStorage.getCurrentUser();
   const { data: domains, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
   
- const { data: permutationsCount } = useCountPermutations(userId);
+  const { data: permutationsCount } = useCountPermutations(userId);
   
   // State for alerts (dummy data for now)
   const [alertsCount] = useState<number>(3);
+
+  const handleManageDomain = (domainName: string) => {
+    localStorage.setItem('selectedDomain', domainName);
+    router.push('/domains');
+  };
   
   return (
     <div className="page-container">
@@ -81,7 +89,7 @@ export default function HomePage() {
                     key={domain.domain_name}
                     className="flex items-center justify-between p-2 rounded-md bg-background/50 border border-border/50"
                   >
-                    <span className="text-sm">{domain.domain_name}</span>
+                    <span className="text-md">{domain.domain_name}</span>
                     <div className="flex items-center gap-2">
                       {domain.ip_address && (
                         <span className="text-xs text-muted-foreground">
@@ -93,6 +101,14 @@ export default function HomePage() {
                           Last scan: {new Date(domain.last_scan).toLocaleDateString()}
                         </span>
                       )}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-8 px-3 text-sm bg-primary/10 text-primary hover:bg-primary/20"
+                        onClick={() => handleManageDomain(domain.domain_name)}
+                      >
+                        Manage
+                      </Button>
                     </div>
                   </div>
                 ))}
