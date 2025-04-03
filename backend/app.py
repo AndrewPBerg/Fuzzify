@@ -16,12 +16,20 @@ from datetime import datetime, timedelta
 
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = False  # Temporarily set to True to recreate tables with new schema
+DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
+
+# Set up logging
+import logging
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.WARNING)
+
+# Suppress noisy Pub/Sub debug logs from external libraries
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager').setLevel(logging.INFO)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.dispatcher').setLevel(logging.INFO)
 logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
+logging.getLogger('google.cloud.pubsub_v1.publisher._batch.thread').setLevel(logging.INFO)
+logging.getLogger('google.api_core.bidi').setLevel(logging.INFO)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
@@ -526,20 +534,22 @@ def permutations_route(user_id, domain_name):
 
             session.commit()
 
-            #  **NEW:** Publish results to Pub/Sub for further processing
-            try:
-                message_payload = json.dumps({
+            # ✅ NEW: One message per permutation, includes ip_address only
+            for entry in generated_permutations:
+                pubsub_payload = json.dumps({
                     "user_id": user_id,
                     "domain_name": domain_name,
-                    "permutations": stored_permutations
+                    "permutation": entry['domain'],
+                    "ip_address": ', '.join(entry.get('dns_a', [])) if isinstance(entry.get('dns_a'), list) else entry.get('dns_a')
                 })
-                future = publisher.publish(topic_path, message_payload.encode('utf-8'))
-                msg_id = future.result()
-                logger.info(f"Published scan results to Pub/Sub with message ID: {msg_id}")
-            except Exception as e:
-                logger.error(f"Failed to publish results to Pub/Sub: {e}")
+                try:
+                    future = publisher.publish(topic_path, pubsub_payload.encode('utf-8'))
+                    msg_id = future.result()
+                    logger.info(f"📤 Published permutation '{entry['domain']}' with msg ID: {msg_id}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to publish permutation '{entry['domain']}': {e}")
 
-        return jsonify({"message": "Permutations generated and added to database"}), 201
+            return jsonify({"message": "Permutations generated and added to database"}), 201
 
 @app.route('/api/<user_id>/schedule', methods=['POST'])
 def schedule_domain(user_id):
