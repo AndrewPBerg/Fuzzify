@@ -1,28 +1,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, RefreshCw } from "lucide-react";
+import { Calendar, Clock, RefreshCw, Loader2, Trash2, AlertTriangle, Pencil, X, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { userStorage } from "@/lib/api/users";
+import { useSchedules, useCreateSchedule, useDeleteSchedules, useUpdateSchedule, Schedule } from "@/lib/api/schedule";
 
 const scheduleOptions = [
-  { id: "hourly", label: "Hourly", icon: Clock },
-  { id: "daily", label: "Daily (24 hours)", icon: Calendar },
-  { id: "weekly", label: "Weekly", icon: Calendar },
+  { id: "hourly", label: "Hourly", icon: Clock, hours: 1 },
+  { id: "daily", label: "Daily (24 hours)", icon: Calendar, hours: 24 },
+  { id: "weekly", label: "Weekly", icon: Calendar, hours: 168 },
   { id: "custom", label: "Custom", icon: Calendar },
 ];
 
 export default function SchedulePage() {
-  const [domainRoots, setDomainRoots] = useState<string[]>([]);
+  const { userId } = userStorage.getCurrentUser();
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState("daily");
   const [customHours, setCustomHours] = useState(24);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [domainRoots, setDomainRoots] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      return JSON.parse(localStorage.getItem("domainRoots") || "[]");
+    }
+    return [];
+  });
 
+  // Query hooks
+  const { 
+    data: schedules = [], 
+    isLoading: schedulesLoading,
+    error: schedulesError 
+  } = useSchedules(userId);
+  const createScheduleMutation = useCreateSchedule();
+  const deleteSchedulesMutation = useDeleteSchedules();
+  const updateScheduleMutation = useUpdateSchedule();
+
+  // Effect to listen for domain roots changes
   useEffect(() => {
-    const storedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
-    setDomainRoots(storedRoots);
+    const handleStorageChange = () => {
+      const updatedRoots = JSON.parse(localStorage.getItem("domainRoots") || "[]");
+      setDomainRoots(updatedRoots);
+    };
     
-    const storedSchedules = JSON.parse(localStorage.getItem("domainSchedules") || "[]");
-    setSchedules(storedSchedules);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const handleDomainToggle = (domain: string) => {
@@ -33,54 +58,73 @@ export default function SchedulePage() {
     );
   };
 
-  const handleScheduleSubmit = (e: React.FormEvent) => {
+  const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (selectedDomains.length === 0) {
-      alert("Please select at least one domain root");
+      toast.error("Error", {
+        description: "Please select at least one domain root",
+      });
       return;
     }
-    
-    const newSchedule = {
-      id: Date.now().toString(),
-      domains: selectedDomains,
-      type: scheduleType,
-      customHours: scheduleType === "custom" ? customHours : null,
-      createdAt: new Date().toISOString(),
-      nextRun: getNextRunTime(scheduleType, customHours),
-    };
-    
-    const updatedSchedules = [...schedules, newSchedule];
-    localStorage.setItem("domainSchedules", JSON.stringify(updatedSchedules));
-    setSchedules(updatedSchedules);
-    setSelectedDomains([]);
-  };
 
-  const getNextRunTime = (type: string, hours: number = 0) => {
-    const now = new Date();
-    
-    switch (type) {
-      case "hourly":
-        now.setHours(now.getHours() + 1);
-        break;
-      case "daily":
-        now.setHours(now.getHours() + 24);
-        break;
-      case "weekly":
-        now.setDate(now.getDate() + 7);
-        break;
-      case "custom":
-        now.setHours(now.getHours() + hours);
-        break;
+    const hours = scheduleType === "custom" 
+      ? customHours 
+      : scheduleOptions.find(opt => opt.id === scheduleType)?.hours || 24;
+
+    try {
+      await createScheduleMutation.mutateAsync({
+        userId,
+        hours,
+        domain_names: selectedDomains
+      });
+      setSelectedDomains([]);
+    } catch (error) {
+      // Error handling is done in the mutation hook
+      console.error("Error creating schedule:", error);
     }
-    
-    return now.toISOString();
   };
 
-  const deleteSchedule = (id: string) => {
-    const updatedSchedules = schedules.filter(schedule => schedule.id !== id);
-    localStorage.setItem("domainSchedules", JSON.stringify(updatedSchedules));
-    setSchedules(updatedSchedules);
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    try {
+      await deleteSchedulesMutation.mutateAsync({
+        userId,
+        schedule_ids: [scheduleId]
+      });
+    } catch (error) {
+      console.error("Error deleting schedule:", error);
+    }
+  };
+
+  const handleStartEditing = (schedule: Schedule) => {
+    setEditingScheduleId(schedule.schedule_id);
+    setEditingName(schedule.schedule_name);
+  };
+
+  const handleCancelEditing = () => {
+    setEditingScheduleId(null);
+    setEditingName("");
+  };
+
+  const handleUpdateScheduleName = async (scheduleId: string) => {
+    if (!editingName.trim()) {
+      toast.error("Error", {
+        description: "Schedule name cannot be empty",
+      });
+      return;
+    }
+
+    try {
+      await updateScheduleMutation.mutateAsync({
+        userId,
+        schedule_id: scheduleId,
+        schedule_name: editingName.trim()
+      });
+      setEditingScheduleId(null);
+      setEditingName("");
+    } catch (error) {
+      console.error("Error updating schedule name:", error);
+    }
   };
 
   return (
@@ -174,17 +218,22 @@ export default function SchedulePage() {
                 </div>
               )}
               
-              <button
+              <Button
                 type="submit"
-                className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  domainRoots.length === 0
-                    ? "bg-primary/50 text-primary-foreground/70 cursor-not-allowed"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
-                disabled={domainRoots.length === 0}
+                className="w-full"
+                disabled={domainRoots.length === 0 || createScheduleMutation.isPending}
               >
-                {domainRoots.length === 0 ? "No Domain Roots Available" : "Create Schedule"}
-              </button>
+                {createScheduleMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Schedule...
+                  </>
+                ) : domainRoots.length === 0 ? (
+                  "No Domain Roots Available"
+                ) : (
+                  "Create Schedule"
+                )}
+              </Button>
             </form>
           </div>
         </div>
@@ -196,7 +245,17 @@ export default function SchedulePage() {
               <h2 className="text-lg font-medium">Active Schedules</h2>
             </div>
             
-            {schedules.length === 0 ? (
+            {schedulesLoading ? (
+              <div className="p-6 text-center">
+                <Loader2 className="mx-auto h-8 w-8 mb-2 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading schedules...</p>
+              </div>
+            ) : schedulesError ? (
+              <div className="p-6 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 mb-2 text-destructive" />
+                <p className="text-muted-foreground">Error loading schedules. Please try again.</p>
+              </div>
+            ) : schedules.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <RefreshCw className="mx-auto h-8 w-8 mb-2 opacity-50" />
                 <p>No scheduled jobs yet. Create one to get started.</p>
@@ -204,33 +263,78 @@ export default function SchedulePage() {
             ) : (
               <div className="divide-y divide-border/30">
                 {schedules.map(schedule => (
-                  <div key={schedule.id} className="p-4 hover:bg-muted/10 transition-colors">
+                  <div key={schedule.schedule_id} className="p-4 hover:bg-muted/10 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium">
-                          {schedule.type.charAt(0).toUpperCase() + schedule.type.slice(1)} Schedule
-                          {schedule.type === "custom" && ` (${schedule.customHours} hours)`}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Next run: {new Date(schedule.nextRun).toLocaleString()}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {schedule.domains.map((domain: string) => (
-                            <span 
-                              key={domain} 
-                              className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
+                        {editingScheduleId === schedule.schedule_id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="h-8 w-[200px]"
+                              placeholder="Enter schedule name"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                onClick={() => handleUpdateScheduleName(schedule.schedule_id)}
+                                disabled={updateScheduleMutation.isPending}
+                              >
+                                {updateScheduleMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                onClick={handleCancelEditing}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{schedule.schedule_name}</h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleStartEditing(schedule)}
                             >
-                              {domain}
-                            </span>
-                          ))}
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Next run: {schedule.next_scan ? new Date(schedule.next_scan).toLocaleString() : 'Not scheduled'}
+                        </p>
+                        <div className="mt-2">
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            {schedule.domain_name}
+                          </span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => deleteSchedule(schedule.id)}
-                        className="text-xs text-destructive hover:underline"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteSchedule(schedule.schedule_id)}
+                        disabled={deleteSchedulesMutation.isPending}
                       >
-                        Delete
-                      </button>
+                        {deleteSchedulesMutation.isPending && 
+                         deleteSchedulesMutation.variables?.schedule_ids.includes(schedule.schedule_id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 ))}

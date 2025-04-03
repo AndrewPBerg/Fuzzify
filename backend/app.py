@@ -8,14 +8,15 @@ from dotenv import load_dotenv
 from google.cloud import pubsub_v1
 import logging
 import time
-from models import User, Domain, Permutation
+from models import User, Domain, Permutation, Schedule
 import threading
 from uuid import uuid4
 from test_perm import generate_and_store_permutations
+from datetime import datetime, timedelta
 
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = False
+DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
 
 # Set up logging
 import logging
@@ -550,61 +551,219 @@ def permutations_route(user_id, domain_name):
 
             return jsonify({"message": "Permutations generated and added to database"}), 201
 
-@app.route('/api/schedule', methods=['POST'])
-def schedule_domain():
+@app.route('/api/<user_id>/schedule', methods=['POST'])
+def schedule_domain(user_id):
     """API endpoint to schedule a domain for a user."""
-    data = request.json(silent=True)
+    data = request.get_json(silent=True)
 
     # Validate request data
-    required_fields = ["user_id", "domain_name", "schedule_date"]
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
+    hours = data.get('hours')
+    domain_names = data.get('domain_names')
+    
+    if not all([hours, domain_names]):
+        return jsonify({"error": "Missing required fields: hours and domain_names"}), 400
+        
+    # Validate hours is between 1 and 168 (1 week)
+    try:
+        hours = int(hours)
+        if not 1 <= hours <= 168:
+            return jsonify({"error": "Hours must be between 1 and 168"}), 400
+    except ValueError:
+        return jsonify({"error": "Hours must be a valid integer"}), 400
 
-    user_id = data["user_id"]
-    domain_name = data["domain_name"]
-    schedule_date = data["schedule_date"]
+    # Validate domain_names is a list
+    if not isinstance(domain_names, list):
+        return jsonify({"error": "domain_names must be a list"}), 400
 
     with Session(engine) as session:
-        #Check if user exists
+        # Check if user exists
         user = session.exec(select(User).where(User.user_id == user_id)).first()
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        #Check if domain exists and belongs to the user
-        domain = session.exec(
-            select(Domain).where(
-                (Domain.domain_name == domain_name) & (Domain.user_id == user_id)
-            )
-        ).first()
-        if not domain:
-            return jsonify({"error": "Domain not found or does not belong to this user"}), 404
-    
-        #Check if this domain is already scheduled
-        existing_schedule = session.exec(
-            select(Permutation).where(
-                (Permutation.domain_name == domain_name) & (Permutation.user_id == user_id)
-            )
-        ).first()
-        if existing_schedule:
+        # Calculate start and next scan times with proper MySQL 8.0 datetime format
+        start_date = datetime.now().replace(microsecond=0)  # Remove microseconds for MySQL compatibility
+        next_scan = (start_date + timedelta(hours=hours)).replace(microsecond=0)
+
+        created_schedules = []
+        for domain_name in domain_names:
+            # Check if domain exists and belongs to user
+            domain = session.exec(
+                select(Domain).where(
+                    (Domain.domain_name == domain_name) & 
+                    (Domain.user_id == user_id)
+                )
+            ).first()
+            
+            if not domain:
+                return jsonify({"error": f"Domain '{domain_name}' not found or doesn't belong to user"}), 404
+
+            try:
+                # Create new schedule with explicit datetime format
+                logger.debug(f"Start date: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                logger.debug(f"Next scan: {next_scan.strftime('%Y-%m-%d %H:%M:%S')}")
+                schedule = Schedule(
+                    user_id=user_id,
+                    domain_name=domain_name,
+                    start_date=start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    next_scan=next_scan.strftime('%Y-%m-%d %H:%M:%S'), # format for MySQL 8.0
+                    schedule_name=f"Scan for {domain_name}"
+                )
+                
+                session.add(schedule)
+                session.flush()  # Flush to get the schedule_id
+                
+                created_schedules.append({
+                    "schedule_id": schedule.schedule_id,
+                    "domain_name": domain_name,
+                    "next_scan": next_scan.strftime('%Y-%m-%d %H:%M:%S')  # Format for MySQL 8.0
+                })
+            except Exception as e:
+                logger.error(f"Error creating schedule for domain {domain_name}: {str(e)}")
+                session.rollback()
+                return jsonify({"error": f"Failed to create schedule: {str(e)}"}), 500
+
+        try:
+            session.commit()
             return jsonify({
-                "message": "Domain is already scheduled",
-                "schedule_id": existing_schedule.id,
-                "schedule_date": existing_schedule.schedule_date
+                "message": "Schedules created successfully",
+                "schedules": created_schedules
+            }), 201
+        except Exception as e:
+            logger.error(f"Error committing schedules: {str(e)}")
+            session.rollback()
+            return jsonify({"error": f"Failed to commit schedules: {str(e)}"}), 500
+
+
+@app.route('/api/<user_id>/schedule', methods=['GET','DELETE','PATCH'])
+def schedule_route(user_id):
+    """API endpoint to get, delete, or update schedules for a user."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to get schedules for user: {user_id}")
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Get all schedules for the user
+            schedules = session.exec(
+                select(Schedule).where(Schedule.user_id == user_id)
+            ).all()
+            
+            # Convert to serializable format
+            schedules_list = [
+                {
+                    "schedule_id": schedule.schedule_id,
+                    "schedule_name": schedule.schedule_name,
+                    "domain_name": schedule.domain_name,
+                    "start_date": schedule.start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    "next_scan": schedule.next_scan.strftime('%Y-%m-%d %H:%M:%S') if schedule.next_scan else None
+                }
+                for schedule in schedules
+            ]
+            
+            return jsonify({"schedules": schedules_list}), 200
+
+    elif request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete schedules for user: {user_id}")
+            
+        data = request.json
+        if not data or 'schedule_ids' not in data:
+            return jsonify({"error": "schedule_ids array is required"}), 400
+            
+        schedule_ids = data.get('schedule_ids')
+        if not isinstance(schedule_ids, list):
+            return jsonify({"error": "schedule_ids must be an array"}), 400
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            deleted_schedules = []
+            for schedule_id in schedule_ids:
+                schedule = session.exec(
+                    select(Schedule).where(
+                        (Schedule.schedule_id == schedule_id) & 
+                        (Schedule.user_id == user_id)
+                    )
+                ).first()
+                
+                if schedule:
+                    session.delete(schedule)
+                    deleted_schedules.append(schedule_id)
+                    
+            if not deleted_schedules:
+                return jsonify({"error": "No valid schedules found to delete"}), 404
+                
+            session.commit()
+            return jsonify({
+                "message": "Schedules deleted successfully",
+                "deleted_schedules": deleted_schedules
             }), 200
 
-        #Insert new schedule entry
-        new_schedule = Permutation(user_id=user_id, domain_name=domain_name, schedule_date=schedule_date)
-        session.add(new_schedule)
-        session.commit()
-        session.refresh(new_schedule)
+    elif request.method == 'PATCH':
+        if DEBUG:
+            logger.debug(f"Received request to update schedules for user: {user_id}")
+            
+        data = request.json
+        if not data or 'schedule_id' not in data:
+            return jsonify({"error": "schedule_id is required"}), 400
+            
+        schedule_id = data.get('schedule_id')
+        schedule_name = data.get('schedule_name')
+        next_scan = data.get('next_scan')
+        
+        if not schedule_name and not next_scan:
+            return jsonify({"error": "At least one field (schedule_name or next_scan) must be provided"}), 400
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Get the schedule to update
+            schedule = session.exec(
+                select(Schedule).where(
+                    (Schedule.schedule_id == schedule_id) & 
+                    (Schedule.user_id == user_id)
+                )
+            ).first()
+            
+            if not schedule:
+                return jsonify({"error": "Schedule not found"}), 404
+                
+            # Update fields if provided
+            if schedule_name:
+                schedule.schedule_name = schedule_name
+            if next_scan:
+                try:
+                    next_scan_dt = datetime.strptime(next_scan, '%Y-%m-%d %H:%M:%S')
+                    schedule.next_scan = next_scan_dt
+                except ValueError:
+                    return jsonify({"error": "Invalid next_scan date format. Use YYYY-MM-DD HH:MM:SS"}), 400
+                    
+            session.add(schedule)
+            session.commit()
+            session.refresh(schedule)
+            
+            return jsonify({
+                "message": "Schedule updated successfully",
+                "schedule": {
+                    "schedule_id": schedule.schedule_id,
+                    "schedule_name": schedule.schedule_name,
+                    "domain_name": schedule.domain_name,
+                    "start_date": schedule.start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    "next_scan": schedule.next_scan.strftime('%Y-%m-%d %H:%M:%S') if schedule.next_scan else None
+                }
+            }), 200
 
-    return jsonify({
-        "message": "Domain scheduled successfully",
-        "schedule_id": new_schedule.id,
-        "user_id": user_id,
-        "domain_name": domain_name,
-        "schedule_date": schedule_date
-    }), 201
 @app.route('/api/<user_id>/permutations-count', methods=['GET'])
 def count_user_permutations(user_id):
     """API endpoint to count the number of permutations for a user."""

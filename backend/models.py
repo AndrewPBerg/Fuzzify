@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 from uuid import uuid4
+from sqlalchemy import DateTime
 
 class User(SQLModel, table=True):
     __tablename__ = "user"
@@ -34,6 +35,7 @@ class Permutation(SQLModel, table=True):
 class Schedule(SQLModel, table=True):
     schedule_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     user_id: str = Field(foreign_key="user.user_id")  # Links to User
+    schedule_name: str = Field(default=None)  # Name of the schedule
     domain_name: str = Field(foreign_key="domain.domain_name")  # Links to Domain
-    schedule_date: datetime = Field()  # Date and time of the scheduled task
-    status: str = Field(default="pending")  # Task status (pending, completed, failed)
+    start_date: datetime = Field(default_factory=datetime.now)  # Start date of the schedule
+    next_scan: datetime = Field(default=None)  # Next scheduled scan time
