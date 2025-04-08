@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
+import { useCreateDomain } from "@/lib/api/domains";
+import { userStorage } from "@/lib/api/users";
 
 // Function to validate if a string is a valid domain
 const isValidDomain = (domain: string): boolean => {
@@ -27,7 +28,7 @@ const isValidDomain = (domain: string): boolean => {
 
 export function DomainRootForm() {
   const [domainRoot, setDomainRoot] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createDomainMutation = useCreateDomain();
 
   const handleAddDomainRoot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,42 +57,20 @@ export function DomainRootForm() {
       return;
     }
     
-    setIsSubmitting(true);
+    const currentUser = userStorage.getCurrentUser();
     
-    try {
-      // Save domain root to backend via API
-      const response = await fetch('/api/domains', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ domainRoot }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add domain root');
+    // Use the mutation from domains.ts
+    createDomainMutation.mutate(
+      { 
+        userId: currentUser.userId, 
+        domain_name: domainRoot 
+      },
+      {
+        onSuccess: () => {
+          setDomainRoot("");
+        }
       }
-      
-      // Update local storage
-      const updatedRoots = [...existingRoots, domainRoot];
-      localStorage.setItem("domainRoots", JSON.stringify(updatedRoots));
-      
-      // Dispatch storage event to update other components
-      window.dispatchEvent(new Event('storage'));
-      
-      toast.success("Success", {
-        description: `Domain root "${domainRoot}" has been saved`,
-      });
-      
-      setDomainRoot("");
-    } catch (error) {
-      console.error('Error adding domain root:', error);
-      toast.error("Error", {
-        description: "Failed to add domain root. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (
@@ -102,16 +81,16 @@ export function DomainRootForm() {
         value={domainRoot}
         onChange={(e) => setDomainRoot(e.target.value)}
         className="max-w-xs bg-background/50"
-        disabled={isSubmitting}
+        disabled={createDomainMutation.isPending}
       />
       <Button 
         type="submit" 
         size="sm" 
         className="flex items-center gap-1"
-        disabled={isSubmitting}
+        disabled={createDomainMutation.isPending}
       >
         <Plus size={16} />
-        <span>{isSubmitting ? "Adding..." : "Add Root"}</span>
+        <span>{createDomainMutation.isPending ? "Adding..." : "Add Root"}</span>
       </Button>
     </form>
   );

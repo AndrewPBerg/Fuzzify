@@ -11,6 +11,11 @@ wheels/
 .DS_Store
 *.DS_Store
 frontend.zip
+.cursorrules
+.cursor
+instructions.txt
+instructions.md
+
 
 # Node.js / JavaScript
 node_modules/

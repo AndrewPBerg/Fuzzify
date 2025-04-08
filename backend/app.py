@@ -4,54 +4,69 @@ import json
 import os
 import time
 import logging
+import time
+
+from requests import Session
+from models import User, Domain, Permutation
 import threading
 from uuid import uuid4
 
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from dotenv import load_dotenv
-from sqlmodel import SQLModel, create_engine, Session, select, text
-
-from models import PhishingDomain, User, Domain, Permutation
-
-# AI classifier
-from transformers import pipeline
-
-# Web Scanning
-import requests
-from bs4 import BeautifulSoup
-from socket import gethostbyname, gaierror
-
-#pub/sub
-#from google.cloud import pubsub_v1
-
-#Phishing classifier 
-
-classifier = pipeline("text-classification", model="ealvaradob/bert-finetuned-phishing")
-
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = False 
+DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
+
+# Set up logging
+import logging
 
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Suppress noisy Pub/Sub debug logs from external libraries
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager').setLevel(logging.INFO)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.dispatcher').setLevel(logging.INFO)
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
+logging.getLogger('google.cloud.pubsub_v1.publisher._batch.thread').setLevel(logging.INFO)
+logging.getLogger('google.api_core.bidi').setLevel(logging.INFO)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
 
 # Load environment variables
-load_dotenv()
+# load_dotenv() # NOTE: this is not needed when using docker compose env variables
 
-# Initialize Flask App
+# Initialize Flask App  
 app = Flask(__name__)
 CORS(app)
 
 # Database Connection
-DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://root:zale4840@localhost:3306/dnstwist_db")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password0@db:3306/dnstwist-db")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
-engine = create_engine(DATABASE_URL)
+# Add connection retry
+max_retries = 5
+retry_delay = 5  # seconds
+retries = 0
+
+while retries < max_retries:
+    try:
+        logger.info(f"Attempt {retries + 1}/{max_retries} to connect to database...")
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        # Test connection
+        with engine.connect() as conn:
+            logger.info("Database connection successful!")
+            break
+    except Exception as e:
+        retries += 1
+        logger.error(f"Database connection failed: {e}")
+        if retries < max_retries:
+            logger.info(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        else:
+            logger.error("Max retries reached. Could not connect to database.")
+            # Continue execution and let app fail later if needed
+            engine = create_engine(DATABASE_URL)
+            break
 
 # Ensure Database Schema Exists
 def create_db_and_tables():
@@ -81,88 +96,87 @@ def drop_all_tables():
         logger.error(f"Error dropping tables: {e}")
         raise
 
-
 # # ------------------------- Pub/Sub Configuration -------------------------
 
-# os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
-# os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT", "our-project")
+os.environ["PUBSUB_EMULATOR_HOST"] = os.getenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("PUBSUB_PROJECT_ID", "your-project-id")
 
-# # Pub/Sub Clients
-# publisher = pubsub_v1.PublisherClient()
-# subscriber = pubsub_v1.SubscriberClient()
+# Initialize Pub/Sub clients
+publisher = pubsub_v1.PublisherClient()
+subscriber = pubsub_v1.SubscriberClient()
 
-# # Topic and Subscription Names
-# project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
-# topic_name = "frontend-to-backend"
-# subscription_name = "backend-sub"
+# Topic and Subscription Names
+project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+topic_name = "frontend-to-backend"
+subscription_name = "backend-sub"
 
-# # Topic & Subscription Paths
-# topic_path = publisher.topic_path(project_id, topic_name)
-# subscription_path = subscriber.subscription_path(project_id, subscription_name)
+# Topic & Subscription Paths
+topic_path = publisher.topic_path(project_id, topic_name)
+subscription_path = subscriber.subscription_path(project_id, subscription_name)
 
-# # Ensure Pub/Sub Topic Exists
-# def ensure_topic():
-#     try:
-#         topics = [t.name for t in publisher.list_topics(request={"project": f"projects/{project_id}"})]
-#         if topic_path not in topics:
-#             publisher.create_topic(request={"name": topic_path})
-#             logger.info(f"✅ Topic {topic_name} created.")
-#         else:
-#             logger.info(f"⚠️ Topic {topic_name} already exists.")
-#     except Exception as e:
-#         logger.error(f"❌ Error creating topic: {e}")
+# Ensure Pub/Sub Topic Exists
+def ensure_topic():
+    try:
+        topics = [t.name for t in publisher.list_topics(request={"project": f"projects/{project_id}"})]
+        if topic_path not in topics:
+            publisher.create_topic(request={"name": topic_path})
+            logger.info(f"✅ Topic {topic_name} created.")
+        else:
+            logger.info(f"⚠️ Topic {topic_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating topic: {e}")
 
-# # Ensure Pub/Sub Subscription Exists
-# def ensure_subscription():
-#     try:
-#         subscriptions = [s.name for s in subscriber.list_subscriptions(request={"project": f"projects/{project_id}"})]
-#         if subscription_path not in subscriptions:
-#             subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
-#             logger.info(f"✅ Subscription {subscription_name} created.")
-#         else:
-#             logger.info(f"⚠️ Subscription {subscription_name} already exists.")
-#     except Exception as e:
-#         logger.error(f"❌ Error creating subscription: {e}")
+# Ensure Pub/Sub Subscription Exists
+def ensure_subscription():
+    try:
+        subscriptions = [s.name for s in subscriber.list_subscriptions(request={"project": f"projects/{project_id}"})]
+        if subscription_path not in subscriptions:
+            subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
+            logger.info(f"✅ Subscription {subscription_name} created.")
+        else:
+            logger.info(f"⚠️ Subscription {subscription_name} already exists.")
+    except Exception as e:
+        logger.error(f"❌ Error creating subscription: {e}")
 
-# @app.route('/publish-message', methods=['POST'])
-# def publish_message():
-#     """Publishes a message from frontend to backend via Pub/Sub."""
-#     data = request.json
-#     if not data or "message" not in data:
-#         return jsonify({"error": "Message field is required"}), 400
+@app.route('/publish-message', methods=['POST'])
+def publish_message():
+    """Publishes a message from frontend to backend via Pub/Sub."""
+    data = request.json
+    if not data or "message" not in data:
+        return jsonify({"error": "Message field is required"}), 400
 
-#     message_data = data["message"].encode("utf-8")
+    message_data = data["message"].encode("utf-8")
 
-#     try:
-#         future = publisher.publish(topic_path, message_data)
-#         msg_id = future.result()
-#         logger.info(f"Published message: {msg_id}")
-#         return jsonify({"message": "Message published", "msg_id": msg_id})
-#     except Exception as e:
-#         logger.error(f"Error publishing message: {e}")
-#         return jsonify({"error": str(e)}), 500
+    try:
+        future = publisher.publish(topic_path, message_data)
+        msg_id = future.result()
+        logger.info(f"Published message: {msg_id}")
+        return jsonify({"message": "Message published", "msg_id": msg_id})
+    except Exception as e:
+        logger.error(f"Error publishing message: {e}")
+        return jsonify({"error": str(e)}), 500
 
-# def callback(message):
-#     try:
-#         message_data = message.data.decode("utf-8")
-#         logger.info(f"📩 Received message: {message_data}")
-#         message.ack()
-#     except Exception as e:
-#         logger.error(f"Error processing message: {e}")
+def callback(message):
+    try:
+        message_data = message.data.decode("utf-8")
+        logger.info(f"📩 Received message: {message_data}")
+        message.ack()
+    except Exception as e:
+        logger.error(f"Error processing message: {e}")
 
-# def start_subscriber():
-#     def run():
-#         while True:
-#             try:
-#                 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-#                 logger.info("🔄 Listening for messages on subscription...")
-#                 streaming_pull_future.result()
-#             except Exception as e:
-#                 logger.error(f"Subscriber error: {e}")
-#                 time.sleep(5)
+def start_subscriber():
+    def run():
+        while True:
+            try:
+                streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
+                logger.info("🔄 Listening for messages on subscription...")
+                streaming_pull_future.result()
+            except Exception as e:
+                logger.error(f"Subscriber error: {e}")
+                time.sleep(5)
 
-#     thread = threading.Thread(target=run, daemon=True)
-#     thread.start()
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
 
 # ------------------------- API Endpoints -------------------------
 
@@ -205,37 +219,207 @@ def test_connection():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/user/<user_id>', methods=['DELETE', 'PATCH', 'GET'])
+def specific_user_route(user_id):
+    """API endpoint to delete, update, or get a user."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to get user: {user_id}")
+            
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            return jsonify({
+                "user_id": user.user_id,
+                "username": user.username,
+                "horizontal_sidebar": user.horizontal_sidebar,
+                "theme": user.theme
+            }), 200
+    
+    elif request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete user: {user_id}")
+            
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            session.delete(user)
+            session.commit()
+        
+        return jsonify({"message": "User deleted successfully", "user_id": user_id}), 200
+    
+    elif request.method == 'PATCH':
+        if DEBUG:
+            logger.debug(f"Received request to update user: {user_id}")
+        
+        data = request.json
+        if not data:
+            return jsonify({"error": "Missing data in request body"}), 400
+        
+        # Check if at least one field to update is provided
+        if not any(key in data for key in ['username', 'horizontal_sidebar', 'theme']):
+            return jsonify({"error": "At least one of username, horizontal_sidebar, or theme must be provided"}), 400
+        
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            # Handle username update if provided
+            if 'username' in data:
+                new_username = data.get("username")
+                
+                # Check if the new username already exists for another user
+                existing_user = session.exec(
+                    select(User).where(
+                        (User.username == new_username) & 
+                        (User.user_id != user_id)
+                    )
+                ).first()
+                
+                if existing_user:
+                    return jsonify({"error": "Username already taken by another user"}), 409
+                
+                # Update username
+                user.username = new_username
+            
+            # Update horizontal_sidebar if provided
+            if 'horizontal_sidebar' in data:
+                user.horizontal_sidebar = data.get("horizontal_sidebar")
+            
+            # Update theme if provided
+            if 'theme' in data:
+                user.theme = data.get("theme")
+                
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            
+            return jsonify({
+                "message": "User updated successfully",
+                "user_id": user_id,
+                "username": user.username,
+                "horizontal_sidebar": user.horizontal_sidebar,
+                "theme": user.theme
+            }), 200
+
 # Create a new user
-@app.route('/api/user', methods=['POST'])
-def create_user():
-    """API endpoint to create a new user and return the user_id."""
+@app.route('/api/user', methods=['POST', 'GET'])
+def user_route():
+    """API endpoint to create a new user and return the user_id or view all users."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug("Received request to view all users.")
+        
+        with Session(engine) as session:
+            users = session.exec(select(User)).all()
+            user_list = [{"user_id": user.user_id, "username": user.username} for user in users]
+            
+        return jsonify({"users": user_list}), 200
+    
+    # POST method - create a new user
     if DEBUG:
         logger.debug("Received request to create a new user.")
 
     data = request.json
-    user_name = data.get("user_name")
+    username = data.get("username")
 
-    if not user_name:
-        return jsonify({"error": "Missing required field 'user_name'"}), 400
+    if not username:
+        return jsonify({"error": "Missing required field 'username'"}), 400
 
     with Session(engine) as session:
-        existing_user = session.exec(select(User).where(User.user_name == user_name)).first()
+        existing_user = session.exec(select(User).where(User.username == username)).first()
         
         if existing_user:
-            return jsonify({"message": "User already exists", "user_name": existing_user.user_name}), 200
+            return jsonify({
+                "message": "User already exists", 
+                "username": existing_user.username,
+                "user_id": existing_user.user_id
+            }), 200
         
-        new_user = User(user_name=user_name)
+        new_user = User(username=username)
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
 
-    return jsonify({"message": "User created successfully", "user_name": new_user.user_name}), 201
+    return jsonify({
+        "message": "User created successfully", 
+        "username": new_user.username,
+        "user_id": new_user.user_id
+    }), 201
 
-@app.route('/api/<user_name>/domain', methods=['POST'])
-def add_domain(user_name):
-    """API endpoint to insert a domain for a user."""
+@app.route('/api/<user_id>/domain', methods=['POST', 'GET', 'DELETE'])
+def domain_route(user_id):
+    """API endpoint to insert a domain for a user or view all domains for a user."""
+    if request.method == 'GET':
+        if DEBUG:
+            logger.debug(f"Received request to view domains for user: {user_id}")
+        
+        with Session(engine) as session:
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            domains = session.exec(select(Domain).where(Domain.user_id == user_id)).all()
+            domain_list = [{"domain_name": domain.domain_name, "total_scans": domain.total_scans} for domain in domains]
+            
+        return jsonify({"domains": domain_list}), 200
+    
+    elif request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete domain for user: {user_id}")
+        
+        # Get the domain name from request body
+        try:
+            data = request.json
+            if not data or 'domain_name' not in data:
+                return jsonify({"error": "Missing domain_name in request body"}), 400
+                
+            domain_name = data.get("domain_name")
+            logger.debug(f"Attempting to delete domain: {domain_name} for user: {user_id}")
+        except Exception as e:
+            logger.error(f"Error parsing DELETE request: {e}")
+            return jsonify({"error": "Invalid JSON in request body"}), 400
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Find the domain to delete
+            domain_to_delete = session.exec(
+                select(Domain).where(
+                    (Domain.domain_name == domain_name) & 
+                    (Domain.user_id == user_id)
+                )
+            ).first()
+            
+            if not domain_to_delete:
+                return jsonify({"error": f"Domain '{domain_name}' not found for user {user_id}"}), 404
+                
+            # Delete the domain
+            try:
+                session.delete(domain_to_delete)
+                session.commit()
+                logger.debug(f"Successfully deleted domain: {domain_name} for user: {user_id}")
+                return jsonify({
+                    "message": "Domain deleted successfully", 
+                    "domain_name": domain_name
+                }), 200
+            except Exception as e:
+                logger.error(f"Error deleting domain: {e}")
+                session.rollback()
+                return jsonify({"error": f"Failed to delete domain: {str(e)}"}), 500
+    
+    # POST method - add a new domain
     if DEBUG:
-        logger.debug(f"Received request to add domain for user: {user_name}")
+        logger.debug(f"Received request to add domain for user: {user_id}")
 
     data = request.json
     domain_name = data.get("domain_name")
@@ -244,115 +428,253 @@ def add_domain(user_name):
         return jsonify({"error": "domain_name is required"}), 400
 
     with Session(engine) as session:
-        user = session.exec(select(User).where(User.user_name == user_name)).first()
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
 
         if not user:
             return jsonify({"error": "User not found. Please create a user first."}), 404
+        # Check if domain already exists for this user
+        existing_domain = session.exec(
+            select(Domain).where(
+                (Domain.domain_name == domain_name) & 
+                (Domain.user_id == user_id)
+            )
+        ).first()
+        
+        if existing_domain:
+            return jsonify({"message": "Domain already exists", "domain_name": domain_name}), 200
 
-        new_domain = Domain(domain_name=domain_name, user_name=user_name, total_scans=0)
+        new_domain = Domain(domain_name=domain_name, user_id=user_id, total_scans=0)
         session.add(new_domain)
         session.commit()
         session.refresh(new_domain)
 
-    return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
+        return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
 
 @app.route('/api/<user_name>/<domain_name>/permutations', methods=['POST', 'GET'])
 def handle_permutations(user_name, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
-    threshold = 80  # similarity % threshold for phishing detection
-
     if request.method == 'POST':
         if DEBUG:
-            logger.debug(f"Received request to add permutations for user {user_name}, domain {domain_name}.")
-
+            logger.debug(f"Received request to get permutations for domain {domain_name}")
+            
         with Session(engine) as session:
-            # Get the domain (must already exist)
-            domain = session.exec(select(Domain).where(Domain.domain_name == domain_name)).first()
-            if not domain:
-                return jsonify({"error": f"Domain '{domain_name}' not found. Please add it first."}), 404
+            user = session.exec(select(User).where(User.user_name == user_name)).first()
+            if not user:
+                return jsonify({"error": "Invalid user_name. User does not exist."}), 400
 
-            # Run dnstwist with LSH and JSON output
-            result = subprocess.run(
-                ['dnstwist', '--lsh', '--format', 'json', domain_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            # Assuming permutations are generated here (code omitted for brevity)
+            # THIS IS WHERE DNSTWIST IS CALLED!!!
+            generated_permutations = []  # Replace with actual permutation generation logic
+            # Sample JSON POST request for adding permutations:
+ 
+            """
+            sample JSON POST request:
+            {
+                "domain_name": "root.com",
+                "permutation_name": "groot.com",
+            
+                "optional_features": {
+                "server": "example.com",
+                "mail_server": "mail.example.com",
+                "risk": true,
+                "ip_address": "192.168.1.1"
+                }
+                
+            }
+            """
 
-            if result.returncode != 0:
-                return jsonify({"error": result.stderr}), 500
+            for perm_name in generated_permutations:
+                # Extract optional features from the request
+                optional_features = request.json.get("optional_features", {})
+                new_permutation = Permutation(
+                    permutation_name=perm_name,
+                    domain_name=domain_name,
+                    **optional_features  # (@AndrewPBerg: this is my favorit syntax ever)
+                )
+                session.add(new_permutation)
 
-            try:
-                data = json.loads(result.stdout)
-            except json.JSONDecodeError:
-                return jsonify({"error": "Invalid JSON output from dnstwist."}), 500
-
-            phishing_matches = []
-
-            for entry in data:
-                permutation_name = entry.get("domain")
-                similarity = entry.get("fuzzy_hash_similarity")
-
-                if not permutation_name:
-                    continue  # Skip if name is missing
-
-                # Check if Permutation exists
-                permutation = session.exec(
-                    select(Permutation).where(Permutation.permutation_name == permutation_name)
-                ).first()
-
-                # If not, create new Permutation
-                if not permutation:
-                    permutation = Permutation(
-                        permutation_name=permutation_name,
-                        domain_name=domain_name,
-                        server=entry.get("http_server"),
-                        mail_server=entry.get("mx"),
-                        ip_address=entry.get("dns_a")
-                    )
-                    session.add(permutation)
-                    session.commit()
-                    session.refresh(permutation)
-
-                # If similarity is high, add to PhishingDomain table
-                if similarity is not None and similarity >= threshold:
-                    phishing = PhishingDomain(
-                        domain_name=domain_name,
-                        permutation_name=permutation_name,
-                        url=entry.get("url"),
-                        similarity_score=similarity,
-                        method="lsh"
-                    )
-                    session.add(phishing)
-                    phishing_matches.append({
-                        "domain": permutation_name,
-                        "similarity": similarity,
-                        "url": entry.get("url")
-                    })
-
-            # Update scan stats
-            domain.last_scan = datetime.utcnow()
-            domain.total_scans += 1
-            session.add(domain)
             session.commit()
 
+        return jsonify({"message": "Permutations generated and added to database"}), 201
+
+@app.route('/api/<user_id>/schedule', methods=['POST'])
+def schedule_domain(user_id):
+    """API endpoint to schedule a domain for a user."""
+    data = request.get_json(silent=True)
+
+    # Validate request data
+    hours = data.get('hours')
+    domain_names = data.get('domain_names')
+    
+    if not all([hours, domain_names]):
+        return jsonify({"error": "Missing required fields: hours and domain_names"}), 400
+        
+    # Validate hours is between 1 and 168 (1 week)
+    try:
+        hours = int(hours)
+        if not 1 <= hours <= 168:
+            return jsonify({"error": "Hours must be between 1 and 168"}), 400
+    except ValueError:
+        return jsonify({"error": "Hours must be a valid integer"}), 400
+
+    # Validate domain_names is a list
+    if not isinstance(domain_names, list):
+        return jsonify({"error": "domain_names must be a list"}), 400
+
+    with Session(engine) as session:
+        # Check if user exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Calculate start and next scan times with proper MySQL 8.0 datetime format
+        start_date = datetime.now().replace(microsecond=0)  # Remove microseconds for MySQL compatibility
+        next_scan = (start_date + timedelta(hours=hours)).replace(microsecond=0)
+
+        created_schedules = []
+        for domain_name in domain_names:
+            # Check if domain exists and belongs to user
+            domain = session.exec(
+                select(Domain).where(
+                    (Domain.domain_name == domain_name) & 
+                    (Domain.user_id == user_id)
+                )
+            ).first()
+            
+            if not domain:
+                return jsonify({"error": f"Domain '{domain_name}' not found or doesn't belong to user"}), 404
+
+            try:
+                # Create new schedule with explicit datetime format
+                logger.debug(f"Start date: {start_date.strftime('%Y-%m-%d %H:%M:%S')}")
+                logger.debug(f"Next scan: {next_scan.strftime('%Y-%m-%d %H:%M:%S')}")
+                schedule = Schedule(
+                    user_id=user_id,
+                    domain_name=domain_name,
+                    start_date=start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    next_scan=next_scan.strftime('%Y-%m-%d %H:%M:%S'), # format for MySQL 8.0
+                    schedule_name=f"Scan for {domain_name}"
+                )
+                
+                session.add(schedule)
+                session.flush()  # Flush to get the schedule_id
+                
+                created_schedules.append({
+                    "schedule_id": schedule.schedule_id,
+                    "domain_name": domain_name,
+                    "next_scan": next_scan.strftime('%Y-%m-%d %H:%M:%S')  # Format for MySQL 8.0
+                })
+            except Exception as e:
+                logger.error(f"Error creating schedule for domain {domain_name}: {str(e)}")
+                session.rollback()
+                return jsonify({"error": f"Failed to create schedule: {str(e)}"}), 500
+
+        try:
+            session.commit()
             return jsonify({
-                "scanned_domain": domain_name,
-                "phishing_matches": phishing_matches,
-                "total_matches": len(phishing_matches)
+                "message": "Schedules created successfully",
+                "schedules": created_schedules
             }), 201
+        except Exception as e:
+            logger.error(f"Error committing schedules: {str(e)}")
+            session.rollback()
+            return jsonify({"error": f"Failed to commit schedules: {str(e)}"}), 500
 
-    elif request.method == 'GET':
+
+@app.route('/api/<user_id>/schedule', methods=['GET','DELETE','PATCH'])
+def schedule_route(user_id):
+    """API endpoint to get, delete, or update schedules for a user."""
+    if request.method == 'GET':
         if DEBUG:
-            logger.debug(f"Received request to fetch permutations for {domain_name}.")
+            logger.debug(f"Received request to get schedules for user: {user_id}")
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Get all schedules for the user
+            schedules = session.exec(
+                select(Schedule).where(Schedule.user_id == user_id)
+            ).all()
+            
+            # Convert to serializable format
+            schedules_list = [
+                {
+                    "schedule_id": schedule.schedule_id,
+                    "schedule_name": schedule.schedule_name,
+                    "domain_name": schedule.domain_name,
+                    "start_date": schedule.start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    "next_scan": schedule.next_scan.strftime('%Y-%m-%d %H:%M:%S') if schedule.next_scan else None
+                }
+                for schedule in schedules
+            ]
+            
+            return jsonify({"schedules": schedules_list}), 200
 
+    elif request.method == 'DELETE':
+        if DEBUG:
+            logger.debug(f"Received request to delete schedules for user: {user_id}")
+            
+        data = request.json
+        if not data or 'schedule_ids' not in data:
+            return jsonify({"error": "schedule_ids array is required"}), 400
+            
+        schedule_ids = data.get('schedule_ids')
+        if not isinstance(schedule_ids, list):
+            return jsonify({"error": "schedule_ids must be an array"}), 400
+            
+        with Session(engine) as session:
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            deleted_schedules = []
+            for schedule_id in schedule_ids:
+                schedule = session.exec(
+                    select(Schedule).where(
+                        (Schedule.schedule_id == schedule_id) & 
+                        (Schedule.user_id == user_id)
+                    )
+                ).first()
+                
+                if schedule:
+                    session.delete(schedule)
+                    deleted_schedules.append(schedule_id)
+                    
+            if not deleted_schedules:
+                return jsonify({"error": "No valid schedules found to delete"}), 404
+                
+            session.commit()
+            return jsonify({
+                "message": "Schedules deleted successfully",
+                "deleted_schedules": deleted_schedules
+            }), 200
+
+    elif request.method == 'PATCH':
+        if DEBUG:
+            logger.debug(f"Received request to update schedules for user: {user_id}")
+            
+        data = request.json
+        if not data or 'schedule_id' not in data:
+            return jsonify({"error": "schedule_id is required"}), 400
+            
+        schedule_id = data.get('schedule_id')
+        schedule_name = data.get('schedule_name')
+        next_scan = data.get('next_scan')
+        
+        if not schedule_name and not next_scan:
+            return jsonify({"error": "At least one field (schedule_name or next_scan) must be provided"}), 400
+            
         with Session(engine) as session:
             permutations = session.exec(select(Permutation).where(Permutation.domain_name == domain_name)).all()
 
         if not permutations:
             return jsonify({"message": "No permutations found for this domain."}), 404
 
-        return jsonify([perm.model_dump() for perm in permutations]), 200
+        return jsonify([perm.model_dump() for perm in permutations])
 
 # ------------------------- Startup Sequence -------------------------
 
@@ -366,7 +688,7 @@ if __name__ == '__main__':
             logger.error(f"Error dropping tables: {e}")
     
     create_db_and_tables()
-    # ensure_topic()
-    # ensure_subscription()
-    # start_subscriber()
+    ensure_topic()
+    ensure_subscription()
+    start_subscriber()
     app.run(host='0.0.0.0', port=8000, debug=True)
