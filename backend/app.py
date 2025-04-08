@@ -453,17 +453,17 @@ def domain_route(user_id):
 
         return jsonify({"message": "Domain added successfully", "domain_name": domain_name}), 201
 
-@app.route('/api/<user_name>/<domain_name>/permutations', methods=['POST', 'GET'])
-def handle_permutations(user_name, domain_name):
+@app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
+def handle_permutations(user_id, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
     if request.method == 'POST':
         if DEBUG:
             logger.debug(f"Received request to get permutations for domain {domain_name}")
             
         with Session(engine) as session:
-            user = session.exec(select(User).where(User.user_name == user_name)).first()
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
             if not user:
-                return jsonify({"error": "Invalid user_name. User does not exist."}), 400
+                return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
             # Assuming permutations are generated here (code omitted for brevity)
             # THIS IS WHERE DNSTWIST IS CALLED!!!
@@ -672,12 +672,75 @@ def schedule_route(user_id):
             return jsonify({"error": "At least one field (schedule_name or next_scan) must be provided"}), 400
             
         with Session(engine) as session:
-            permutations = session.exec(select(Permutation).where(Permutation.domain_name == domain_name)).all()
+            # Check if user exists
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Get the schedule to update
+            schedule = session.exec(
+                select(Schedule).where(
+                    (Schedule.schedule_id == schedule_id) & 
+                    (Schedule.user_id == user_id)
+                )
+            ).first()
+            
+            if not schedule:
+                return jsonify({"error": "Schedule not found"}), 404
+                
+            # Update fields if provided
+            if schedule_name:
+                schedule.schedule_name = schedule_name
+            if next_scan:
+                try:
+                    next_scan_dt = datetime.strptime(next_scan, '%Y-%m-%d %H:%M:%S')
+                    schedule.next_scan = next_scan_dt
+                except ValueError:
+                    return jsonify({"error": "Invalid next_scan date format. Use YYYY-MM-DD HH:MM:SS"}), 400
+                    
+            session.add(schedule)
+            session.commit()
+            session.refresh(schedule)
+            
+            return jsonify({
+                "message": "Schedule updated successfully",
+                "schedule": {
+                    "schedule_id": schedule.schedule_id,
+                    "schedule_name": schedule.schedule_name,
+                    "domain_name": schedule.domain_name,
+                    "start_date": schedule.start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    "next_scan": schedule.next_scan.strftime('%Y-%m-%d %H:%M:%S') if schedule.next_scan else None
+                }
+            }), 200
 
-        if not permutations:
-            return jsonify({"message": "No permutations found for this domain."}), 404
+@app.route('/api/<user_id>/permutations-count', methods=['GET'])
+def count_user_permutations(user_id):
+    """API endpoint to count the number of permutations for a user."""
+    if DEBUG:
+        logger.debug(f"Received request to count permutations for user: {user_id}")
 
-        return jsonify([perm.model_dump() for perm in permutations])
+    with Session(engine) as session:
+        # Check if user exists
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get all domains for the user
+        user_domains = session.exec(
+            select(Domain.domain_name).where(Domain.user_id == user_id)
+        ).all()
+
+        if not user_domains:
+            return jsonify({"count": 0}), 200
+
+        # Count permutations for all user's domains using a subquery
+        total_count = session.exec(
+            select(text("COUNT(*)")).select_from(
+                select(Permutation).where(Permutation.domain_name.in_(user_domains))
+            )
+        ).first()
+
+        return jsonify({"count": total_count}), 200
 
 # ------------------------- Startup Sequence -------------------------
 

@@ -45,3 +45,12 @@ class PhishingDomain(SQLModel, table=True):
     similarity_score: float = Field(default=0.0)  # % match from LSH or pHash
     method: str = Field(default="lsh")  # 'lsh' or 'phash'
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Schedule Table
+class Schedule(SQLModel, table=True):
+    schedule_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: str = Field(foreign_key="user.user_id")  # Links to User
+    schedule_name: str = Field(default=None)  # Name of the schedule
+    domain_name: str = Field(foreign_key="domain.domain_name")  # Links to Domain
+    start_date: datetime = Field(default_factory=datetime.now)  # Start date of the schedule
+    next_scan: datetime = Field(default=None)  # Next scheduled scan time
