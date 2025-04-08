@@ -32,3 +32,16 @@ class Permutation(SQLModel, table=True):
     server: Optional[str] = Field(default=None)  # Web server for variation
     mail_server: Optional[str] = Field(default=None)  # Mail server for variation
     ip_address: Optional[str] = Field(default=None)  # Associated IP address
+
+
+class PhishingDomain(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    domain_name: str = Field(foreign_key="domain.domain_name")  # Original domain
+    permutation_name: str = Field(foreign_key="permutation.permutation_name")  # Variant
+
+    url: Optional[str] = Field(default=None)  # Full URL if resolved
+    similarity_score: float = Field(default=0.0)  # % match from LSH or pHash
+    method: str = Field(default="lsh")  # 'lsh' or 'phash'
+    created_at: datetime = Field(default_factory=datetime.utcnow)
