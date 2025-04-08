@@ -15,7 +15,7 @@ logging.getLogger('sqlalchemy').setLevel(logging.CRITICAL)
 
 
 # Change this to your working connection string
-DATABASE_URL = "mysql+mysqlconnector://root:zale4840@localhost:3306/dnstwist_database"
+DATABASE_URL = "mysql+mysqlconnector://user:password@db:3306/dnstwist_db"
 engine = create_engine(DATABASE_URL, echo=False)
 SQLModel.metadata.create_all(engine)
 
