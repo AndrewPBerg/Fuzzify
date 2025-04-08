@@ -1,16 +1,33 @@
+from datetime import datetime
 import subprocess
 import json
-from flask import Flask, jsonify, request
-from sqlmodel import SQLModel, create_engine, Session, select, text
-from flask_cors import CORS
 import os
-from dotenv import load_dotenv
-from google.cloud import pubsub_v1
-import logging
 import time
-from models import User, Domain, Permutation
+import logging
 import threading
 from uuid import uuid4
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from dotenv import load_dotenv
+from sqlmodel import SQLModel, create_engine, Session, select, text
+
+from models import PhishingDomain, User, Domain, Permutation
+
+# AI classifier
+from transformers import pipeline
+
+# Web Scanning
+import requests
+from bs4 import BeautifulSoup
+from socket import gethostbyname, gaierror
+
+#pub/sub
+#from google.cloud import pubsub_v1
+
+#Phishing classifier 
+
+classifier = pipeline("text-classification", model="ealvaradob/bert-finetuned-phishing")
 
 # Enable Debugging for Logs
 DEBUG = True
@@ -30,7 +47,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Database Connection
-DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://user:password0@db:3306/dnstwist-db")
+DATABASE_URL = os.getenv("DB_URL", "mysql+mysqlconnector://root:zale4840@localhost:3306/dnstwist_db")
 if DEBUG:
     logger.debug(f"Connecting to database at: {DATABASE_URL}")
 
@@ -63,6 +80,7 @@ def drop_all_tables():
     except Exception as e:
         logger.error(f"Error dropping tables: {e}")
         raise
+
 
 # # ------------------------- Pub/Sub Configuration -------------------------
 
@@ -241,51 +259,88 @@ def add_domain(user_name):
 @app.route('/api/<user_name>/<domain_name>/permutations', methods=['POST', 'GET'])
 def handle_permutations(user_name, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
+    threshold = 80  # similarity % threshold for phishing detection
+
     if request.method == 'POST':
         if DEBUG:
             logger.debug(f"Received request to add permutations for user {user_name}, domain {domain_name}.")
 
         with Session(engine) as session:
-            user = session.exec(select(User).where(User.user_name == user_name)).first()
-            if not user:
-                return jsonify({"error": "Invalid user_name. User does not exist."}), 400
+            # Get the domain (must already exist)
+            domain = session.exec(select(Domain).where(Domain.domain_name == domain_name)).first()
+            if not domain:
+                return jsonify({"error": f"Domain '{domain_name}' not found. Please add it first."}), 404
 
-            # Check if domain exists; add it if it doesn't
-            domain_obj = session.get(Domain, domain_name)
-            if not domain_obj:
-                domain_obj = Domain(domain_name=domain_name, user_id=user.user_id)
-                session.add(domain_obj)
-                session.commit()
-                logger.debug(f"Added new domain: {domain_name}")
+            # Run dnstwist with LSH and JSON output
+            result = subprocess.run(
+                ['dnstwist', '--lsh', '--format', 'json', domain_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
 
-            # Call dnstwist to generate permutations
+            if result.returncode != 0:
+                return jsonify({"error": result.stderr}), 500
+
             try:
-                result = subprocess.run(
-                    ["python", "-m", "dnstwist", "--format", "json", domain_name],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                generated_permutations = json.loads(result.stdout)
-            except Exception as e:
-                logger.error(f" Error running dnstwist: {e}")
-                return jsonify({"error": "Failed to generate permutations."}), 500
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                return jsonify({"error": "Invalid JSON output from dnstwist."}), 500
 
-            # Store permutations
-            for entry in generated_permutations:
-                perm = Permutation(
-                    permutation_name=entry['domain'],
-                    domain_name=domain_name,
-                    server=entry.get('http'),
-                    mail_server=entry.get('mx'),
-                    risk=None,
-                    ip_address=', '.join(entry.get('dns_a', [])) if isinstance(entry.get('dns_a'), list) else entry.get('dns_a')
-                )
-                session.add(perm)
+            phishing_matches = []
 
+            for entry in data:
+                permutation_name = entry.get("domain")
+                similarity = entry.get("fuzzy_hash_similarity")
+
+                if not permutation_name:
+                    continue  # Skip if name is missing
+
+                # Check if Permutation exists
+                permutation = session.exec(
+                    select(Permutation).where(Permutation.permutation_name == permutation_name)
+                ).first()
+
+                # If not, create new Permutation
+                if not permutation:
+                    permutation = Permutation(
+                        permutation_name=permutation_name,
+                        domain_name=domain_name,
+                        server=entry.get("http_server"),
+                        mail_server=entry.get("mx"),
+                        ip_address=entry.get("dns_a")
+                    )
+                    session.add(permutation)
+                    session.commit()
+                    session.refresh(permutation)
+
+                # If similarity is high, add to PhishingDomain table
+                if similarity is not None and similarity >= threshold:
+                    phishing = PhishingDomain(
+                        domain_name=domain_name,
+                        permutation_name=permutation_name,
+                        url=entry.get("url"),
+                        similarity_score=similarity,
+                        method="lsh"
+                    )
+                    session.add(phishing)
+                    phishing_matches.append({
+                        "domain": permutation_name,
+                        "similarity": similarity,
+                        "url": entry.get("url")
+                    })
+
+            # Update scan stats
+            domain.last_scan = datetime.utcnow()
+            domain.total_scans += 1
+            session.add(domain)
             session.commit()
 
-        return jsonify({"message": "Permutations generated and added to database"}), 201
+            return jsonify({
+                "scanned_domain": domain_name,
+                "phishing_matches": phishing_matches,
+                "total_matches": len(phishing_matches)
+            }), 201
 
     elif request.method == 'GET':
         if DEBUG:
@@ -297,7 +352,7 @@ def handle_permutations(user_name, domain_name):
         if not permutations:
             return jsonify({"message": "No permutations found for this domain."}), 404
 
-        return jsonify([perm.model_dump() for perm in permutations])
+        return jsonify([perm.model_dump() for perm in permutations]), 200
 
 # ------------------------- Startup Sequence -------------------------
 
