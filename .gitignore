@@ -63,3 +63,6 @@ out
 # Typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local log files (not for GitHub)
+/backend/logs/
