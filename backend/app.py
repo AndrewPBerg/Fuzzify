@@ -14,7 +14,7 @@ from uuid import uuid4
 from test_perm import generate_and_store_permutations
 from datetime import datetime, timedelta
 
-LOG_DIR = "backend/logs/pubsub"  # adjust if your structure is different
+LOG_DIR = "logs/pubsub"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def write_pubsub_log(message_data):
@@ -23,7 +23,7 @@ def write_pubsub_log(message_data):
     log_file_path = os.path.join(LOG_DIR, f"{now.strftime('%Y-%m-%d')}.log")
 
     with open(log_file_path, "a") as f:
-        f.write(f"[{now.strftime('%H:%M:%S')}] {message_data}\n")
+        f.write(f"[{now.isoformat()}] | {message_data}\n")
 
 # Enable Debugging for Logs
 DEBUG = True
@@ -174,13 +174,14 @@ def callback(message):
     try:
         message_data = message.data.decode("utf-8")
         logger.info(f"📩 Received message: {message_data}")
-        
-        # Write message to local log file
+
+        #  Use shared logging function
         write_pubsub_log(message_data)
 
         message.ack()
     except Exception as e:
         logger.error(f"Error processing message: {e}")
+
 
 def start_subscriber():
     def run():
