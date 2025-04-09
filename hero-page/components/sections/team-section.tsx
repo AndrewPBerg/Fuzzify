@@ -218,12 +218,12 @@ export default function TeamSection({ id }: TeamSectionProps) {
         <h2 ref={titleRef} className="text-3xl md:text-4xl font-bold text-center mb-6 text-white">
           Our Experts
         </h2>
-
+{/* 
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p ref={subtitleRef} className="text-lg text-white/80">
             Meet the specialists who built <span className="font-aclonica">Fuzzify</span>
           </p>
-        </div>
+        </div> */}
 
         <div ref={cardContainerRef} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {team.map((member, index) => (

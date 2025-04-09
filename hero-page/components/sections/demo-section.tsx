@@ -138,11 +138,11 @@ export default function DemoSection({ id }: DemoSectionProps) {
           Try <span className="font-aclonica">Fuzzify</span>
         </h2>
 
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        {/* <div className="text-center max-w-2xl mx-auto mb-16">
           <p ref={subheadingRef} className="text-lg text-white/80">
             See how <span className="font-aclonica">Fuzzify</span> can identify and classify domain threats in real-time
           </p>
-        </div>
+        </div> */}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card ref={card1Ref} className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
