@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Aclonica } from "next/font/google"
 import "./globals.css"
+import { CustomCursor } from "@/components/ui/custom-cursor"
 
 const inter = Inter({ subsets: ["latin"] })
 const aclonica = Aclonica({ 
@@ -23,7 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${aclonica.variable}`}>{children}</body>
+      <body className={`${inter.className} ${aclonica.variable}`}>
+        <CustomCursor />
+        {children}
+      </body>
     </html>
   )
 }
