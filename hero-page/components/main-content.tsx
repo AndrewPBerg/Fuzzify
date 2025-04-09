@@ -6,6 +6,8 @@ import PresentationControls from "@/components/presentation-controls"
 import { StoryGuide } from "@/components/presentation/story-guide"
 import HeroSection from "@/components/sections/hero-section"
 import AboutSection from "@/components/sections/about-section"
+import TheFuzzSection from "@/components/sections/the-fuzz-section"
+import OurSystemSection from "@/components/sections/our-system-section"
 import TeamSection from "@/components/sections/team-section"
 import DemoSection from "@/components/sections/demo-section"
 import { cn } from "@/lib/utils"
@@ -200,6 +202,8 @@ export default function MainContent({ title, subtitle = "", sections }: MainCont
   const sectionComponents = [
     <HeroSection key="hero" id="hero" />,
     <AboutSection key="about" id="about" />,
+    <TheFuzzSection key="the-fuzz" id="the-fuzz" />,
+    <OurSystemSection key="our-system" id="our-system" />,
     <TeamSection key="team" id="team" />,
     <DemoSection key="demo" id="demo" />,
   ]

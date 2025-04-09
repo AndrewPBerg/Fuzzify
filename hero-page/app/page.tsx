@@ -13,6 +13,14 @@ export default function Home() {
       title: "About",
     },
     {
+      id: "the-fuzz",
+      title: "The Fuzz",
+    },
+    {
+      id: "our-system",
+      title: "Our System",
+    },
+    {
       id: "team",
       title: "Team",
     },
