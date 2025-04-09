@@ -8,9 +8,13 @@ import { Shield } from "lucide-react"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  id?: string
+}
+
+export default function HeroSection({ id }: HeroSectionProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const subheadingRef = useRef<HTMLParagraphElement>(null)
   const ctaRef = useRef<HTMLDivElement>(null)
@@ -127,39 +131,26 @@ export default function HeroSection() {
   }, [isMounted])
 
   return (
-    <section 
-      ref={sectionRef} 
-      className="min-h-[90vh] sm:min-h-screen flex flex-col justify-center pt-20 pb-10 px-4 sm:px-6 md:px-10 relative overflow-hidden"
-      id="hero"
-    >
+    <div ref={sectionRef} id={id} className="min-h-[90vh] sm:min-h-screen flex flex-col justify-center pt-20 pb-10 px-4 sm:px-6 md:px-10 relative overflow-hidden">
       <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-20 items-center">
         <div className="order-2 md:order-1 mt-8 md:mt-0">
           <h1
             ref={headingRef}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight"
           >
             <GradientText className="font-aclonica">Fuzzify</GradientText>
-            <span className="text-white block mt-2">Secure Digital Identity Protection</span>
+            <span className="text-white block mt-2">Find Your Domain Doppelgänger</span>
           </h1>
           <p
             ref={subheadingRef}
-            className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-white/80 max-w-lg leading-relaxed"
+            className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl text-white/80 max-w-lg leading-relaxed"
           >
-            Discover and classify malicious lookalike domains with our advanced DNS fuzzing engine. 
-            Fuzzify protects your brand from phishing and impersonation attacks by identifying threats 
-            and rating them on our comprehensive risk scale.
+            Fuzzify protects your website from phishing and impersonation attacks by rating impersonation sites.
           </p>
           <div 
             ref={ctaRef} 
             className="mt-6 sm:mt-8 md:mt-10 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4"
           >
-            <button className="bg-white text-[#17345A] px-6 py-3 rounded-full font-medium hover:bg-white/90 transition-colors flex items-center justify-center sm:justify-start gap-2">
-              <Shield className="w-5 h-5" />
-              Start Domain Protection
-            </button>
-            <button className="bg-transparent border border-white/30 text-white px-6 py-3 rounded-full font-medium hover:bg-white/10 transition-colors">
-              View Threat Scale
-            </button>
           </div>
         </div>
 
@@ -182,14 +173,14 @@ export default function HeroSection() {
               <div ref={hotspot2Ref} className="absolute bottom-1/4 right-1/4 w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center cursor-pointer group">
                 <span className="w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-primary group-hover:animate-pulse"></span>
                 <div className="absolute right-full mr-2 bg-background/90 backdrop-blur-sm p-2 rounded text-xs w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  Advanced AI-powered threat detection
+                  Advanced Algorithmic Threat Detection
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
 

@@ -20,7 +20,11 @@ interface TeamMember {
   }
 }
 
-export default function TeamSection() {
+interface TeamSectionProps {
+  id?: string
+}
+
+export default function TeamSection({ id }: TeamSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const subtitleRef = useRef<HTMLParagraphElement>(null)
@@ -167,61 +171,59 @@ export default function TeamSection() {
 
   const team: TeamMember[] = [
     {
-      name: "TODO",
-      role: "TODO",
-      avatar: "TODO",
-      bio: "TODO",
+      name: "Andrew Berg",
+      role: "B.A. Computer Science",
+      avatar: "andrew-fuzzify-team.jpg",
+      bio: "",
       social: {
-        github: "TODO",
-        twitter: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/AndrewPBerg",
+        linkedin: "https://www.linkedin.com/in/andrew-berg-0822132b2/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
-      avatar: "TODO",
-      bio: "TODO",
+      name: "Mia Glover",
+      role: "B.S. Data Science",
+      avatar: "mia-fuzzify-team2.jpg",
+      bio: "",
       social: {
-        github: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/miahamm44",
+        linkedin: "https://www.linkedin.com/in/mia-glover-3222ba24b/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
-      avatar: "TODO",
-      bio: "TODO",
+      name: "Joeseph Heindel",
+      role: "B.A. Computer Science",
+      avatar: "joeseph-fuzzify-team.png",
+      bio: "",
       social: {
-        github: "TODO",
-        twitter: "TODO",
+        github: "https://github.com/jheindel525",
+        linkedin: "https://www.linkedin.com/in/heindeljah/",
       },
     },
     {
-      name: "TODO",
-      role: "TODO",
+      name: "Laura Zalewska",
+      role: "B.S. Computer Science",
       avatar: "TODO",
-      bio: "TODO",
+      bio: "",
       social: {
-        github: "TODO",
-        twitter: "TODO",
-        linkedin: "TODO",
+        github: "https://github.com/laurazal",
+        linkedin: "https://www.linkedin.com/in/laura-zalewska-3b0410304/",
       },
     },
   ]
 
   return (
-    <div ref={sectionRef} className="py-20 md:py-32 px-6 md:px-10">
+    <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
-        <h2 ref={titleRef} className="text-3xl md:text-4xl font-bold text-center mb-6 text-white">
+        <h2 ref={titleRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-6 text-white">
           Our Experts
         </h2>
-
+{/* 
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p ref={subtitleRef} className="text-lg text-white/80">
-            Meet the specialists who built <span className="font-aclonica">Fuzzify</span>'s threat detection and classification engine
+            Meet the specialists who built <span className="font-aclonica">Fuzzify</span>
           </p>
-        </div>
+        </div> */}
 
         <div ref={cardContainerRef} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {team.map((member, index) => (
@@ -231,10 +233,10 @@ export default function TeamSection() {
               className="overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 team-card"
             >
               <CardHeader className="p-0">
-                <div className="aspect-square w-full bg-white/5 flex items-center justify-center avatar-container">
-                  <Avatar className="h-32 w-32">
-                    <AvatarImage src={member.avatar} alt={member.name} loading="lazy" />
-                    <AvatarFallback className="bg-white/10 text-white">
+                <div className="aspect-square w-full bg-white/5 flex items-center justify-center">
+                  <Avatar className="h-64 w-64 rounded Avatar-image">
+                    <AvatarImage src={member.avatar} alt={member.name} loading="lazy" className="object-cover" />
+                    <AvatarFallback className="bg-white/10 text-white rounded-none">
                       {member.name
                         .split(" ")
                         .map((n) => n[0])
@@ -250,7 +252,7 @@ export default function TeamSection() {
                   </h3>
                   <p className="text-sm text-white/60">{member.role}</p>
                 </div>
-                <p className="text-sm text-white/80">{member.bio}</p>
+                <p className="text-sm text-center text-white/80">{member.bio}</p>
               </CardContent>
               <CardFooter className="flex justify-center gap-2 pt-0">
                 {member.social.github && (

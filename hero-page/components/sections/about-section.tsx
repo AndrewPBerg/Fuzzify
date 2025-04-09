@@ -6,7 +6,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, AlertTriangle, BarChart3 } from "lucide-react"
 
-export default function AboutSection() {
+interface AboutSectionProps {
+  id?: string
+}
+
+export default function AboutSection({ id }: AboutSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const mainCardRef = useRef<HTMLDivElement>(null)
@@ -157,88 +161,77 @@ export default function AboutSection() {
   }, [])
 
   return (
-    <div ref={sectionRef} className="py-16 sm:py-20 md:py-32 px-4 sm:px-6 md:px-10" id="about">
+    <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
-        <h2 ref={titleRef} className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 text-white">
+        <h2 ref={titleRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-10 sm:mb-16 text-white">
           About <span className="font-aclonica">Fuzzify</span>
         </h2>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card ref={mainCardRef} className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
             <CardHeader className="pb-2 sm:pb-4">
-              <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl">
-                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                {/* what is fuzzify */}
+              <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl md:text-3xl">
+                <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
-              {/* what is fuzzify subtitle */}
               <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* what is fuzzify text body */}
-              <p className="text-base sm:text-lg leading-relaxed text-white/80">
-                TODO  
-              </p>
+              <ul className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold">•</span>
+                  <span>Powerful domain security platform that identifies potential lookalike domains</span>
+                </li>
+                <li className="flex items-start gap-2">  
+                  <span className="text-primary font-bold">•</span>
+                  <span>Advanced DNS fuzzing engine to detect domain variations used for phishing or brand impersonation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold">•</span>  
+                  <span>Continuous domain monitoring and detailed risk assessments</span>
+                </li>
+              </ul>
             </CardContent>
           </Card>
 
           <div className="grid gap-4 sm:gap-6">
             <Card ref={card1Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
               <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  {/* Threat Detection */}
-                  Threat Detection
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl md:text-2xl">
+                  <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                  Threat Detection  
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Threat Detection list items */}
                 <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                  {/* <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Finds active lookalikes of your domain</span>
+                  </li> */}
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., amazom.com, g00gle.com)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., google-login.com)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>TODO (e.g., google-login.com)</span>
+                    <span>Finds active permutations of your domain</span>  
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             <Card ref={card2Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
-              <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  {/* Risk Scoring */}
+              <CardHeader className="pb-2 sm:pb-4"> 
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl md:text-2xl">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   Risk Scoring
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">  
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>Compares the potential lookalikes to the original domain</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>TODO</span>
+                    <span>Rates the risk of impersonation based on similarity and threat level</span>
                   </li>
                 </ul>
               </CardContent>

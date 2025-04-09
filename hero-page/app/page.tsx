@@ -13,8 +13,12 @@ export default function Home() {
       title: "About",
     },
     {
-      id: "tech-stack",
-      title: "Tech Stack",
+      id: "the-fuzz",
+      title: "The Fuzz",
+    },
+    {
+      id: "our-system",
+      title: "Our System",
     },
     {
       id: "team",

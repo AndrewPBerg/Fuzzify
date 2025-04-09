@@ -140,3 +140,12 @@ body {
   animation: progressGrow 30s linear forwards;
 }
 
+/* Custom cursor styles */
+html, body {
+  cursor: none !important;
+}
+
+* {
+  cursor: none !important;
+}
+
