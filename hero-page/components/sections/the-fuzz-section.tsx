@@ -20,10 +20,10 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
           {/* DNS Fuzzing Card */}
-          <Card className="border-primary/30 bg-white/10 backdrop-blur-md">
+          <Card className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-white text-xl sm:text-2xl">
-                <Dna className="h-6 w-6 text-primary" />
+              <CardTitle className="flex items-center gap-3 text-white text-xl sm:text-2xl md:text-3xl">
+                <Dna className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 DNS Fuzzing: Finding Lookalikes
               </CardTitle>
               <CardDescription className="text-white/70 text-sm sm:text-base pt-1">
@@ -41,10 +41,10 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
           </Card>
 
           {/* Fuzzy Hashing Card */}
-          <Card className="border-primary/30 bg-white/10 backdrop-blur-md">
+          <Card className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-white text-xl sm:text-2xl">
-                <Fingerprint className="h-6 w-6 text-primary" />
+              <CardTitle className="flex items-center gap-3 text-white text-xl sm:text-2xl md:text-3xl">
+                <Fingerprint className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 Fuzzy Hashing: Comparing Similarity
               </CardTitle>
               <CardDescription className="text-white/70 text-sm sm:text-base pt-1">

@@ -163,15 +163,15 @@ export default function AboutSection({ id }: AboutSectionProps) {
   return (
     <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
-        <h2 ref={titleRef} className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 text-white">
+        <h2 ref={titleRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-10 sm:mb-16 text-white">
           About <span className="font-aclonica">Fuzzify</span>
         </h2>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card ref={mainCardRef} className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
             <CardHeader className="pb-2 sm:pb-4">
-              <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl">
-                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl md:text-3xl">
+                <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
               <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
@@ -197,8 +197,8 @@ export default function AboutSection({ id }: AboutSectionProps) {
           <div className="grid gap-4 sm:gap-6">
             <Card ref={card1Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
               <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl md:text-2xl">
+                  <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   Threat Detection  
                 </CardTitle>
               </CardHeader>
@@ -218,8 +218,8 @@ export default function AboutSection({ id }: AboutSectionProps) {
 
             <Card ref={card2Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
               <CardHeader className="pb-2 sm:pb-4"> 
-                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl md:text-2xl">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   Risk Scoring
                 </CardTitle>
               </CardHeader>

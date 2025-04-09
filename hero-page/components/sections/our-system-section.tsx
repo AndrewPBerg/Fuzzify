@@ -9,8 +9,8 @@ interface OurSystemSectionProps {
 }
 
 export default function OurSystemSection({ id }: OurSystemSectionProps) {
-  const cardClassName = "relative border-primary/30 bg-white/10 backdrop-blur-md w-full md:w-1/4 z-10 flex flex-col h-full min-h-[220px]"
-  const iconClassName = "h-12 w-12 sm:h-14 sm:w-14 text-primary mb-4"
+  const cardClassName = "relative border-primary/20 bg-white/10 backdrop-blur-md w-full md:w-1/4 z-10 flex flex-col h-full min-h-[220px] border border-white/10"
+  const iconClassName = "h-14 w-14 sm:h-16 sm:w-16 text-primary mb-4"
   
   return (
     <div id={id} className="py-20 md:py-32 px-6 md:px-10">
@@ -24,7 +24,7 @@ export default function OurSystemSection({ id }: OurSystemSectionProps) {
           <Card className={cardClassName}>
             <CardHeader className="flex flex-col items-center text-center pt-6">
               <Search className={iconClassName} />
-              <CardTitle className="text-white text-xl sm:text-2xl">
+              <CardTitle className="text-white text-xl sm:text-2xl md:text-3xl">
                 1. Generate & Find
               </CardTitle>
             </CardHeader>
@@ -39,7 +39,7 @@ export default function OurSystemSection({ id }: OurSystemSectionProps) {
           <Card className={cardClassName}>
             <CardHeader className="flex flex-col items-center text-center pt-6">
               <ScanText className={iconClassName} />
-              <CardTitle className="text-white text-xl sm:text-2xl">
+              <CardTitle className="text-white text-xl sm:text-2xl md:text-3xl">
                 2. Code Comparison
               </CardTitle>
             </CardHeader>
@@ -54,7 +54,7 @@ export default function OurSystemSection({ id }: OurSystemSectionProps) {
           <Card className={cardClassName}>
             <CardHeader className="flex flex-col items-center text-center pt-6">
               <Image className={iconClassName} />
-              <CardTitle className="text-white text-xl sm:text-2xl">
+              <CardTitle className="text-white text-xl sm:text-2xl md:text-3xl">
                 3. Visual Check
               </CardTitle>
             </CardHeader>
@@ -69,7 +69,7 @@ export default function OurSystemSection({ id }: OurSystemSectionProps) {
           <Card className={cardClassName}>
             <CardHeader className="flex flex-col items-center text-center pt-6">
               <ShieldCheck className={iconClassName} />
-              <CardTitle className="text-white text-xl sm:text-2xl">
+              <CardTitle className="text-white text-xl sm:text-2xl md:text-3xl">
                 4. Rank Threat
               </CardTitle>
             </CardHeader>

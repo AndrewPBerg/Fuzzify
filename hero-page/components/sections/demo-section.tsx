@@ -134,7 +134,7 @@ export default function DemoSection({ id }: DemoSectionProps) {
   return (
     <div ref={sectionRef} id={id} className="py-20 md:py-32 px-6 md:px-10">
       <div className="max-w-7xl mx-auto">
-        <h2 ref={headingRef} className="text-3xl md:text-4xl font-bold text-center mb-6 text-white">
+        <h2 ref={headingRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-6 text-white">
           Try <span className="font-aclonica">Fuzzify</span>
         </h2>
 
@@ -147,8 +147,8 @@ export default function DemoSection({ id }: DemoSectionProps) {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card ref={card1Ref} className="border-primary/20 bg-white/10 backdrop-blur-md border border-white/10">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-white flex items-center gap-2 text-xl sm:text-2xl md:text-3xl">
+                <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 Threat Classification Demo
               </CardTitle>
               <CardDescription className="text-white/60">
@@ -177,7 +177,7 @@ export default function DemoSection({ id }: DemoSectionProps) {
           <div className="flex justify-center w-full">
             <Card ref={card2Ref} className="bg-white/10 backdrop-blur-md border border-white/10 max-w-xl w-full">
               <CardHeader>
-                <CardTitle className="text-white text-center">
+                <CardTitle className="text-white text-center text-xl sm:text-2xl md:text-3xl">
                   Threat Dashboard
                 </CardTitle>
                 <CardDescription className="text-white/60 text-center">

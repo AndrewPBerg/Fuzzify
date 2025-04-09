@@ -136,14 +136,14 @@ export default function HeroSection({ id }: HeroSectionProps) {
         <div className="order-2 md:order-1 mt-8 md:mt-0">
           <h1
             ref={headingRef}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight"
           >
             <GradientText className="font-aclonica">Fuzzify</GradientText>
             <span className="text-white block mt-2">Find Your Domain Doppelgänger</span>
           </h1>
           <p
             ref={subheadingRef}
-            className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-white/80 max-w-lg leading-relaxed"
+            className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl text-white/80 max-w-lg leading-relaxed"
           >
             Fuzzify protects your website from phishing and impersonation attacks by rating impersonation sites.
           </p>
