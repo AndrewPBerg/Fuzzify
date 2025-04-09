@@ -5,7 +5,7 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { ExternalLink, Play, Shield, AlertTriangle, BarChart3 } from "lucide-react"
+import { ExternalLink, Play, Shield, AlertTriangle, BarChart3, CalendarCheck } from "lucide-react"
 import Link from "next/link"
 
 interface DemoSectionProps {
@@ -181,7 +181,7 @@ export default function DemoSection({ id }: DemoSectionProps) {
                   Threat Dashboard
                 </CardTitle>
                 <CardDescription className="text-white/60 text-center">
-                  Experience the full power of <span className="font-aclonica">Fuzzify</span>'s threat detection engine
+                  Experience <span className="font-aclonica">Fuzzify</span> completely free
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -193,20 +193,20 @@ export default function DemoSection({ id }: DemoSectionProps) {
                 <ul ref={featuresRef} className="space-y-2 text-white/80 max-w-md mx-auto">
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-primary mt-0.5" />
-                    <span>TODO</span>
+                    <span>Domain Monitoring</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
-                    <span>TODO</span>
+                    <span>Impersonation Detection</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <BarChart3 className="h-4 w-4 text-primary mt-0.5" />
-                    <span>TODO</span>
+                    <span>Risk Scoring</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <Shield className="h-4 w-4 text-primary mt-0.5" />
-                    <span>TODO</span>
-                  </li>
+                <li className="flex items-start gap-2">
+                  <CalendarCheck className="h-4 w-4 text-primary mt-0.5" />
+                  <span>Scheduling</span>
+                </li>
                 </ul>
               </CardContent>
               <CardFooter>

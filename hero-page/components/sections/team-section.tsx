@@ -221,7 +221,7 @@ export default function TeamSection({ id }: TeamSectionProps) {
 
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p ref={subtitleRef} className="text-lg text-white/80">
-            Meet the specialists who built <span className="font-aclonica">Fuzzify</span>'s threat detection and classification engine
+            Meet the specialists who built <span className="font-aclonica">Fuzzify</span>
           </p>
         </div>
 

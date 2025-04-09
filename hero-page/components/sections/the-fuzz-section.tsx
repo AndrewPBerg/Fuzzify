@@ -31,15 +31,11 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-base sm:text-lg leading-relaxed text-white/80 mb-4">
-                Generates and tests variations of your domain to find potentially malicious lookalikes.
-              </p>
               <ul className="list-disc list-inside space-y-2 text-white/80 text-base sm:text-lg">
-                  <li>Modifies domain names (typos, dashes, different TLDs like .co).</li>
-                  <li>Identifies which variations exist online.</li>
-                  <li>Helps find sites potentially impersonating your brand.</li>
+                <li>Generates variations of your domain (typos, dashes, TLDs)</li>
+                <li>Tests which variations exist online</li>
+                <li>Finds sites potentially impersonating your brand</li>
               </ul>
-              {/* Visual Placeholder -> Replaced with Diagram */}
               <DnsFuzzingDiagram />
             </CardContent>
           </Card>
@@ -56,15 +52,10 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-base sm:text-lg leading-relaxed text-white/80 mb-4">
-                Creates 'fuzzy' fingerprints to compare how <span className="italic">similar</span> sites are, even if not identical.
-              </p>
-              <p className="text-base sm:text-lg text-white/80 font-medium">We use two types:</p>
               <ul className="list-disc list-inside mt-2 space-y-2 text-white/80 text-base sm:text-lg">
-                <li><strong className="text-primary/90">TLSH:</strong> Fingerprints <span className="italic">source code</span> (HTML, CSS, JS) to detect code copying.</li>
-                <li><strong className="text-primary/90">pHash:</strong> Fingerprints <span className="italic">visual appearance</span> from screenshots to detect visual mimicry.</li>
+                <li><strong className="text-primary/90">TLSH:</strong> Fingerprints <span className="italic">source code</span> to detect code copying</li>  
+                <li><strong className="text-primary/90">pHash:</strong> Fingerprints <span className="italic">visual appearance</span> to detect visual mimicry</li>
               </ul>
-               {/* Visual Placeholder -> Replaced with Diagram */}
               <FuzzyHashingDiagram />
             </CardContent>
           </Card>

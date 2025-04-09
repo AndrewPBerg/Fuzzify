@@ -145,9 +145,7 @@ export default function HeroSection({ id }: HeroSectionProps) {
             ref={subheadingRef}
             className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-white/80 max-w-lg leading-relaxed"
           >
-            Discover and classify malicious lookalike domains with our advanced DNS fuzzing engine. 
-            Fuzzify protects your brand from phishing and impersonation attacks by identifying threats 
-            and rating them on our comprehensive risk scale.
+            Fuzzify protects your website from phishing and impersonation attacks by rating impersonation sites.
           </p>
           <div 
             ref={ctaRef} 

@@ -172,17 +172,25 @@ export default function AboutSection({ id }: AboutSectionProps) {
             <CardHeader className="pb-2 sm:pb-4">
               <CardTitle className="flex items-center gap-2 text-white text-xl sm:text-2xl">
                 <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                {/* what is fuzzify */}
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
-              {/* what is fuzzify subtitle */}
               <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
             </CardHeader>
             <CardContent>
-              {/* what is fuzzify text body */}
-              <p className="text-base sm:text-lg leading-relaxed text-white/80">
-                Fuzzify is a powerful domain security platform that helps organizations protect their digital assets from domain impersonation attacks. Our advanced DNS fuzzing engine systematically identifies and analyzes potential lookalike domains that could be used for phishing, brand impersonation, or other malicious purposes. By continuously monitoring domain variations and providing detailed risk assessments, Fuzzify empowers security teams to proactively defend their brand's digital presence.
-              </p>
+              <ul className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold">•</span>
+                  <span>Powerful domain security platform that identifies potential lookalike domains</span>
+                </li>
+                <li className="flex items-start gap-2">  
+                  <span className="text-primary font-bold">•</span>
+                  <span>Advanced DNS fuzzing engine to detect domain variations used for phishing or brand impersonation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold">•</span>  
+                  <span>Continuous domain monitoring and detailed risk assessments</span>
+                </li>
+              </ul>
             </CardContent>
           </Card>
 
@@ -191,58 +199,39 @@ export default function AboutSection({ id }: AboutSectionProps) {
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
                   <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  {/* Threat Detection */}
-                  Threat Detection
+                  Threat Detection  
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Threat Detection list items */}
                 <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                  {/* <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    <span>Finds active lookalikes of your domain</span>
+                  </li> */}
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Character substitution detection (e.g., amaz0n.com, g00gle.com)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Homograph detection using Unicode characters</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Domain prefix/suffix manipulation (e.g., google-login.com)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Typosquatting and keyboard layout variations</span>
+                    <span>Finds active permutations of your domain</span>  
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             <Card ref={card2Ref} className="bg-white/10 backdrop-blur-md border border-white/10">
-              <CardHeader className="pb-2 sm:pb-4">
+              <CardHeader className="pb-2 sm:pb-4"> 
                 <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  {/* Risk Scoring */}
                   Risk Scoring
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">  
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Real-time DNS and SSL certificate analysis</span>
+                    <span>Compares the potential lookalikes to the original domain</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
-                    <span>Web server and mail server fingerprinting</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>IP reputation and geolocation tracking</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    <span>Automated threat classification and risk assessment</span>
+                    <span>Rates the risk of impersonation based on similarity and threat level</span>
                   </li>
                 </ul>
               </CardContent>
