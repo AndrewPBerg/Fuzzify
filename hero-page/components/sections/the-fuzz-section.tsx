@@ -3,8 +3,8 @@
 import React from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Dna, Hash, Fingerprint } from "lucide-react"
-import DnsFuzzingDiagram from "../diagrams/dns-fuzzing-diagram"
-import FuzzyHashingDiagram from "../diagrams/fuzzy-hashing-diagram"
+import { DNSFuzzVisualizer } from "../diagrams/dns-fuzzing-diagram"
+import FuzzyHashDiagram from "../diagrams/fuzzy-hashing-diagram"
 
 interface TheFuzzSectionProps {
   id: string
@@ -36,7 +36,8 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
                 <li>Tests which variations exist online</li>
                 <li>Finds sites potentially impersonating your brand</li>
               </ul>
-              <DnsFuzzingDiagram />
+              <DNSFuzzVisualizer originalDomain="example.com" fuzzedDomains={[{domainName: "example1.com", fuzzMethod: "DNS Fuzzing", registered: true}, {domainName: "example.co", fuzzMethod: "DNS Fuzzing", registered: true}
+                , {domainName: "exampl.com", fuzzMethod: "DNS Fuzzing", registered: true}]} />
             </CardContent>
           </Card>
 
@@ -56,7 +57,7 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
                 <li><strong className="text-primary/90">TLSH:</strong> Fingerprints <span className="italic">source code</span> to detect code copying</li>  
                 <li><strong className="text-primary/90">pHash:</strong> Fingerprints <span className="italic">visual appearance</span> to detect visual mimicry</li>
               </ul>
-              <FuzzyHashingDiagram />
+              <FuzzyHashDiagram />
             </CardContent>
           </Card>
         </div>

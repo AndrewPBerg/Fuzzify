@@ -1,110 +1,215 @@
-"use client"
+"use client";
 
-import React from "react"
-import { motion } from "motion/react"
+import { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.3,
-      delayChildren: 0.2,
-    },
-  },
+interface FuzzedDomain {
+  domainName: string;
+  fuzzMethod?: string;
+  registered?: boolean;
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, pathLength: 0 },
-  visible: { 
-    opacity: 1, 
-    pathLength: 1,
-    transition: { duration: 1, ease: "easeInOut" } 
-  },
+interface DNSFuzzVisualizerProps {
+  originalDomain: string;
+  fuzzedDomains: FuzzedDomain[];
+  className?: string;
 }
 
-const textVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.5, delay: 0.8 } // Delay text appearance
-  },
-}
-
-export default function DnsFuzzingDiagram() {
-  const originalDomain = "yourbrand.com"
-  const variations = [
-    { name: "yourbrand.co", x: 250, y: 50 },
-    { name: "yourbrond.com", x: 280, y: 150 },
-    { name: "your-brand.com", x: 200, y: 250 },
-    { name: "yourbrandd.com", x: 50, y: 220 },
-    { name: "yourbrand.net", x: 0, y: 100 },
-  ]
-  const centerX = 150
-  const centerY = 150
-
+export function DNSFuzzVisualizer({ 
+  originalDomain, 
+  fuzzedDomains,
+  className
+}: DNSFuzzVisualizerProps) {
+  const [domains, setDomains] = useState<FuzzedDomain[]>([]);
+  const [showEdges, setShowEdges] = useState(false);
+  
+  // Calculate positions for the nodes
+  const calculateNodePositions = (index: number, total: number, radius: number) => {
+    // Calculate positions in a circular arrangement
+    const angle = (index / total) * 2 * Math.PI;
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+    
+    return { x, y };
+  };
+  
+  // Animate domains appearing one by one
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDomains([]);
+      setShowEdges(false);
+      
+      // Add domains one by one with a delay
+      fuzzedDomains.forEach((domain, index) => {
+        setTimeout(() => {
+          setDomains(prev => [...prev, domain]);
+        }, index * 120); // Staggered animation delay
+      });
+      
+      // Show edges after all domains are added
+      setTimeout(() => {
+        setShowEdges(true);
+      }, fuzzedDomains.length * 120 + 300);
+      
+    }, 500); // Initial delay
+    
+    return () => clearTimeout(timer);
+  }, [fuzzedDomains]);
+  
   return (
-    <motion.svg
-      viewBox="0 0 350 300"
-      width="100%"
-      height="300px"
-      preserveAspectRatio="xMidYMid meet"
-      variants={containerVariants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.5 }}
-      className="mt-6"
-    >
-      {/* Central Domain - Glassy */}
-      <motion.rect
-        x={centerX - 50}
-        y={centerY - 20}
-        width={100}
-        height={40}
-        rx={5}
-        fill="hsl(var(--background) / 0.7)" // Correct light background, glassy
-        stroke="hsl(var(--border) / 0.5)"    // Correct light border, subtle
-        strokeWidth={1}
-        variants={itemVariants}
-      />
-      <motion.text
-        x={centerX}
-        y={centerY + 5}
-        textAnchor="middle"
-        fill="hsl(var(--foreground))" // Correct light foreground
-        fontSize="12px"
-        fontWeight="bold"
-        variants={textVariants}
+    <div className={cn(
+      "relative w-full aspect-[2/1] md:aspect-[3/2] max-h-[400px] flex items-center justify-center mt-6", 
+      className
+    )}>
+      {/* Central node (original domain) */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ 
+          duration: 0.5, 
+          type: "spring", 
+          stiffness: 200 
+        }}
+        className="absolute z-10 flex items-center justify-center w-24 h-24 md:w-28 md:h-28 text-xs md:text-sm font-bold text-white bg-emerald-600 rounded-full shadow-lg border-2 border-white/30"
       >
         {originalDomain}
-      </motion.text>
+      </motion.div>
+      
+      {/* Fuzzed domain nodes */}
+      {domains.map((domain, index) => {
+        const position = calculateNodePositions(index, fuzzedDomains.length, 175);
+        
+        return (
+          <TooltipProvider key={domain.domainName}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1, 
+                    x: position.x, 
+                    y: position.y 
+                  }}
+                  whileHover={{ 
+                    scale: 1.1,
+                    boxShadow: "0 0 15px rgba(255, 255, 255, 0.3)",
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ 
+                    duration: 0.7, 
+                    type: "spring", 
+                    stiffness: 100,
+                    damping: 10
+                  }}
+                  className={cn(
+                    "absolute z-10 flex items-center justify-center w-20 h-20 md:w-22 md:h-22 text-[10px] md:text-xs font-medium text-white rounded-full shadow-md backdrop-blur-sm cursor-pointer border border-white/20",
+                    domain.registered ? "bg-blue-dark" : "bg-blue-medium"
+                  )}
+                >
+                  {domain.domainName}
+                </motion.div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-blue-dark/90 backdrop-blur-md border border-white/20 text-white">
+                <p><strong>Domain:</strong> {domain.domainName}</p>
+                {domain.fuzzMethod && (
+                  <p><strong>Method:</strong> {domain.fuzzMethod}</p>
+                )}
+                <p><strong>Status:</strong> {domain.registered ? "Registered" : "Available"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      })}
+      
+      {/* Connection lines */}
+      <svg className="absolute w-full h-full pointer-events-none top-0 left-0">
+        <g className="translate-x-1/2 translate-y-1/2">
+          {/* Lines from center to each node */}
+          {domains.map((domain, index) => {
+            const position = calculateNodePositions(index, fuzzedDomains.length, 175);
+            
+            return (
+              <motion.line
+                key={`center-${domain.domainName}`}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.85 }}
+                transition={{ duration: 0.8, delay: index * 0.12 }}
+                x1="0"
+                y1="0"
+                x2={position.x}
+                y2={position.y}
+                stroke={domain.registered ? "#17345A" : "#4D6A8F"}
+                strokeWidth="2"
+                strokeDasharray="4 2"
+              />
+            );
+          })}
+          
+          {/* Lines between adjacent nodes */}
+          {showEdges && domains.length > 1 && domains.map((domain, index) => {
+            const currentPosition = calculateNodePositions(index, fuzzedDomains.length, 175);
+            const nextIndex = (index + 1) % domains.length;
+            const nextPosition = calculateNodePositions(nextIndex, fuzzedDomains.length, 175);
+            
+            return (
+              <motion.line
+                key={`edge-${index}-${nextIndex}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.9 }}
+                transition={{ duration: 0.5 }}
+                x1={currentPosition.x}
+                y1={currentPosition.y}
+                x2={nextPosition.x}
+                y2={nextPosition.y}
+                stroke={domain.registered ? "#17345A" : "#4D6A8F"}
+                strokeWidth="2.5"
+                strokeDasharray="5 3"
+              />
+            );
+          })}
+        </g>
+      </svg>
 
-      {/* Fuzzed Variations */}
-      {variations.map((variation, index) => (
-        <React.Fragment key={index}>
-          {/* Connecting Line - Blue Accent */}
-          <motion.line
-            x1={centerX}
-            y1={centerY}
-            x2={variation.x}
-            y2={variation.y}
-            stroke="#3b82f6" // Direct blue hex code for accent
-            strokeWidth={1.5}
-            variants={itemVariants}
-          />
-          {/* Variation Text */}
-          <motion.text
-            x={variation.x}
-            y={variation.y + 15}
-            fill="hsl(var(--foreground))" // Correct light foreground
-            fontSize="11px"
-            variants={textVariants}
-          >
-            {variation.name}
-          </motion.text>
-        </React.Fragment>
-      ))}
-    </motion.svg>
-  )
-} 
+      {/* Create a visual debug node to ensure the diagram is rendered */}
+      {showEdges && domains.length > 1 && (
+        <div className="absolute right-2 bottom-2 w-0 h-0 opacity-0">
+          Debug node to trigger rendering
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Example usage in other components:
+/*
+import { DNSFuzzVisualizer } from '@/components/diagrams/dns-fuzzing-diagram';
+
+export default function DNSFuzzingExample() {
+  const sampleData = {
+    originalDomain: "example.com",
+    fuzzedDomains: [
+      { domainName: "examp1e.com", fuzzMethod: "homoglyph", registered: true },
+      { domainName: "example.net", fuzzMethod: "TLD swap", registered: true },
+      { domainName: "exampl3.com", fuzzMethod: "homoglyph", registered: false },
+      { domainName: "example-secure.com", fuzzMethod: "addition", registered: false },
+      { domainName: "examplecom.co", fuzzMethod: "TLD addition", registered: true },
+      { domainName: "exarnple.com", fuzzMethod: "homoglyph", registered: true },
+      { domainName: "example.org", fuzzMethod: "TLD swap", registered: false },
+      { domainName: "exampie.com", fuzzMethod: "typo", registered: true },
+    ]
+  };
+
+  return (
+    <div className="p-8">
+      <h2 className="mb-8 text-2xl font-bold">DNS Fuzzing Visualization</h2>
+      <DNSFuzzVisualizer 
+        originalDomain={sampleData.originalDomain} 
+        fuzzedDomains={sampleData.fuzzedDomains} 
+      />
+    </div>
+  );
+}
+*/
