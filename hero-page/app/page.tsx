@@ -13,10 +13,6 @@ export default function Home() {
       title: "About",
     },
     {
-      id: "tech-stack",
-      title: "Tech Stack",
-    },
-    {
       id: "team",
       title: "Team",
     },
