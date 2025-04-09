@@ -175,7 +175,7 @@ export default function HeroSection({ id }: HeroSectionProps) {
               <div ref={hotspot2Ref} className="absolute bottom-1/4 right-1/4 w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center cursor-pointer group">
                 <span className="w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-primary group-hover:animate-pulse"></span>
                 <div className="absolute right-full mr-2 bg-background/90 backdrop-blur-sm p-2 rounded text-xs w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  Advanced AI-powered threat detection
+                  Advanced Algorithmic Threat Detection
                 </div>
               </div>
             </div>
