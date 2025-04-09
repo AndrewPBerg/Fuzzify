@@ -46,7 +46,7 @@ export default function TheFuzzSection({ id }: TheFuzzSectionProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-white text-xl sm:text-2xl md:text-3xl">
                 <Fingerprint className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-                Fuzzy Hashing: Comparing Similarity
+                Fuzzy Hashing: Comparing Sites
               </CardTitle>
               <CardDescription className="text-white/70 text-sm sm:text-base pt-1">
                 Measuring content and visual similarity between sites.
