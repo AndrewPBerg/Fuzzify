@@ -61,12 +61,24 @@ export default function FuzzyHashingDiagram() {
           <div className="h-full w-full p-4 flex flex-col">
             <div className="text-xs md:text-sm font-bold mb-2 text-center">Original</div>
             <div className="flex-1 bg-white/10 rounded-lg p-3 flex flex-col space-y-3">
-              <div className="h-2.5 bg-white/40 rounded-full w-full"></div>
-              <div className="h-2.5 bg-white/40 rounded-full w-4/5"></div>
-              <div className="h-2.5 bg-white/40 rounded-full w-11/12"></div>
-              <div className="flex justify-end">
-                <div className="h-4 w-4 bg-white/60 rounded-full"></div>
+              {/* Header-like element */}
+              <div className="h-2.5 bg-white/60 rounded-full w-full"></div>
+              
+              {/* Logo and navigation-like elements */}
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-4 bg-white/80 rounded-sm"></div>
+                <div className="flex space-x-1.5">
+                  <div className="h-2.5 w-6 bg-white/60 rounded-full"></div>
+                  <div className="h-2.5 w-6 bg-white/60 rounded-full"></div>
+                </div>
               </div>
+              
+              {/* Main content */}
+              <div className="h-2.5 bg-white/40 rounded-full w-11/12"></div>
+              <div className="h-2.5 bg-white/40 rounded-full w-full"></div>
+              
+              {/* Button-like element */}
+              <div className="self-start h-3 w-8 bg-white/70 rounded-md"></div>
             </div>
           </div>
         </motion.div>
@@ -101,12 +113,24 @@ export default function FuzzyHashingDiagram() {
           <div className="h-full w-full p-4 flex flex-col">
             <div className="text-xs md:text-sm font-bold mb-2 text-center">Lookalike</div>
             <div className="flex-1 bg-white/10 rounded-lg p-3 flex flex-col space-y-3">
-              <div className="h-2.5 bg-white/40 rounded-full w-full"></div>
-              <div className="h-2.5 bg-white/40 rounded-full w-3/4"></div>
-              <div className="h-2.5 bg-white/40 rounded-full w-11/12"></div>
-              <div className="flex justify-end">
-                <div className="h-4 w-4 bg-white/60 rounded-full"></div>
+              {/* Header-like element - similar but different */}
+              <div className="h-2.5 bg-white/60 rounded-full w-11/12"></div>
+              
+              {/* Logo and navigation-like elements - different layout */}
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-4 bg-white/80 rounded-full"></div>
+                <div className="flex space-x-1.5">
+                  <div className="h-2.5 w-4 bg-white/60 rounded-full"></div>
+                  <div className="h-2.5 w-7 bg-white/60 rounded-full"></div>
+                </div>
               </div>
+              
+              {/* Main content - slightly different width */}
+              <div className="h-2.5 bg-white/40 rounded-full w-10/12"></div>
+              <div className="h-2.5 bg-white/40 rounded-full w-full"></div>
+              
+              {/* Button-like element - different position */}
+              <div className="self-end h-3 w-7 bg-white/70 rounded-md"></div>
             </div>
           </div>
         </motion.div>
@@ -143,10 +167,7 @@ export default function FuzzyHashingDiagram() {
                   initial={{ width: 0 }}
                   animate={{ width: showScores ? `${data.percentage}%` : 0 }}
                   transition={{ duration: 1, delay: 1.2 + (index * 0.2) }}
-                  className={cn(
-                    "h-full rounded-full", 
-                    data.percentage > 80 ? "bg-red-500" : "bg-blue-light"
-                  )}
+                  className="h-full rounded-full bg-red-500"
                 />
               </div>
             </div>
