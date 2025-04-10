@@ -174,10 +174,10 @@ export default function AboutSection({ id }: AboutSectionProps) {
                 <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 What is <span className="font-aclonica">Fuzzify</span>?
               </CardTitle>
-              <CardDescription className="text-white/70 text-sm sm:text-base">Protecting your brand from domain impersonation threats</CardDescription>
+              <CardDescription className="text-white/70 text-base sm:text-lg">Protecting your brand from domain impersonation threats</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+              <ul className="space-y-1.5 sm:space-y-2 text-base sm:text-lg text-white/80">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">•</span>
                   <span>Powerful domain security platform that identifies potential lookalike domains</span>
@@ -203,7 +203,7 @@ export default function AboutSection({ id }: AboutSectionProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">
+                <ul ref={listItems1Ref} className="space-y-1.5 sm:space-y-2 text-base sm:text-lg text-white/80">
                   {/* <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
                     <span>Finds active lookalikes of your domain</span>
@@ -224,7 +224,7 @@ export default function AboutSection({ id }: AboutSectionProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-sm sm:text-base text-white/80">  
+                <ul ref={listItems2Ref} className="space-y-1.5 sm:space-y-2 text-base sm:text-lg text-white/80">  
                   <li className="flex items-start gap-2">
                     <span className="text-primary font-bold">•</span>
                     <span>Compares the potential lookalikes to the original domain</span>

@@ -251,9 +251,9 @@ export default function TeamSection({ id }: TeamSectionProps) {
                   <h3 className="font-bold text-lg text-white">
                     {member.name}
                   </h3>
-                  <p className="text-sm text-white/60">{member.role}</p>
+                  <p className="text-base text-white/60">{member.role}</p>
                 </div>
-                <p className="text-sm text-center text-white/80">{member.bio}</p>
+                <p className="text-base text-center text-white/80">{member.bio}</p>
               </CardContent>
               <CardFooter className="flex justify-center gap-2 pt-0">
                 {member.social.github && (

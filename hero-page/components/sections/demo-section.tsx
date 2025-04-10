@@ -168,7 +168,7 @@ export default function DemoSection({ id }: DemoSectionProps) {
               </div>
             </CardContent>
             <CardFooter>
-              <p className="text-sm text-white/60">
+              <p className="text-base text-white/60">
                 This interactive demo shows our domain analysis and threat scoring system in real-time
               </p>
             </CardFooter>
@@ -185,12 +185,12 @@ export default function DemoSection({ id }: DemoSectionProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-white/80 text-center">
+                <p className="text-base text-white/80 text-center">
                   Our advanced threat dashboard provides comprehensive monitoring of potential domain imposters and classifies 
                   each threat on our proprietary risk scale.
                 </p>
-                <p className="text-white/80 text-center">Features in the full application:</p>
-                <ul ref={featuresRef} className="space-y-2 text-white/80 max-w-md mx-auto">
+                <p className="text-base text-white/80 text-center">Features in the full application:</p>
+                <ul ref={featuresRef} className="space-y-2 text-base text-white/80 max-w-md mx-auto">
                   <li className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-primary mt-0.5" />
                     <span>Domain Monitoring</span>

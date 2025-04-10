@@ -143,7 +143,7 @@ export default function HeroSection({ id }: HeroSectionProps) {
           </h1>
           <p
             ref={subheadingRef}
-            className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl text-white/80 max-w-lg leading-relaxed"
+            className="mt-4 sm:mt-6 text-xl sm:text-2xl md:text-3xl text-white/80 max-w-lg leading-relaxed"
           >
             Fuzzify protects your website from phishing and impersonation attacks by rating impersonation sites.
           </p>
@@ -165,14 +165,14 @@ export default function HeroSection({ id }: HeroSectionProps) {
             <div className="hidden sm:flex">
               <div ref={hotspot1Ref} className="absolute top-1/4 left-1/4 w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center cursor-pointer group">
                 <span className="w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-primary group-hover:animate-pulse"></span>
-                <div className="absolute left-full ml-2 bg-background/90 backdrop-blur-sm p-2 rounded text-xs w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute left-full ml-2 bg-background/90 backdrop-blur-sm p-2 rounded text-sm w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   Real-time domain monitoring and alerts
                 </div>
               </div>
 
               <div ref={hotspot2Ref} className="absolute bottom-1/4 right-1/4 w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center cursor-pointer group">
                 <span className="w-2 sm:w-3 h-2 sm:h-3 rounded-full bg-primary group-hover:animate-pulse"></span>
-                <div className="absolute right-full mr-2 bg-background/90 backdrop-blur-sm p-2 rounded text-xs w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute right-full mr-2 bg-background/90 backdrop-blur-sm p-2 rounded text-sm w-32 sm:w-40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   Advanced Algorithmic Threat Detection
                 </div>
               </div>
