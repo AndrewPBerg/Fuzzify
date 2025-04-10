@@ -141,11 +141,12 @@ body {
 }
 
 /* Custom cursor styles */
-html, body {
+:root:not([data-path*="demo-app"]) html, 
+:root:not([data-path*="demo-app"]) body {
   cursor: none !important;
 }
 
-* {
+:root:not([data-path*="demo-app"]) * {
   cursor: none !important;
 }
 

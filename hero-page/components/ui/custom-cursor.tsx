@@ -1,12 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 
 export function CustomCursor() {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isVisible, setIsVisible] = useState(false)
-
+  const pathname = usePathname()
+  
+  // Skip rendering if we're in the demo-app
+  const isInDemoApp = pathname?.includes("/demo-app")
+  
   useEffect(() => {
+    // Don't attach listeners if we're in the demo app
+    if (isInDemoApp) return
+    
     const updatePosition = (e: MouseEvent) => {
       setPosition({ x: e.clientX, y: e.clientY })
     }
@@ -23,10 +31,10 @@ export function CustomCursor() {
       document.removeEventListener("mouseenter", handleMouseEnter)
       document.removeEventListener("mouseleave", handleMouseLeave)
     }
-  }, [])
+  }, [isInDemoApp])
 
-  // Don't render the cursor if it's not visible
-  if (!isVisible) return null
+  // Don't render the cursor if it's not visible or if we're in the demo app
+  if (!isVisible || isInDemoApp) return null
 
   return (
     <div

@@ -181,26 +181,6 @@ export default function TeamSection({ id }: TeamSectionProps) {
       },
     },
     {
-      name: "Mia Glover",
-      role: "B.S. Data Science",
-      avatar: "mia-fuzzify-team2.jpg",
-      bio: "",
-      social: {
-        github: "https://github.com/miahamm44",
-        linkedin: "https://www.linkedin.com/in/mia-glover-3222ba24b/",
-      },
-    },
-    {
-      name: "Joeseph Heindel",
-      role: "B.A. Computer Science",
-      avatar: "joeseph-fuzzify-team.png",
-      bio: "",
-      social: {
-        github: "https://github.com/jheindel525",
-        linkedin: "https://www.linkedin.com/in/heindeljah/",
-      },
-    },
-    {
       name: "Laura Zalewska",
       role: "B.S. Computer Science",
       avatar: "laura-fuzzify-team.png",
@@ -210,6 +190,27 @@ export default function TeamSection({ id }: TeamSectionProps) {
         linkedin: "https://www.linkedin.com/in/laura-zalewska-3b0410304/",
       },
     },
+    {
+      name: "Joseph Heindel",
+      role: "B.A. Computer Science",
+      avatar: "joeseph-fuzzify-team.png",
+      bio: "",
+      social: {
+        github: "https://github.com/jheindel525",
+        linkedin: "https://www.linkedin.com/in/heindeljah/",
+      },
+    },
+    {
+      name: "Mia Glover",
+      role: "B.S. Data Science",
+      avatar: "mia-fuzzify-team2.jpg",
+      bio: "",
+      social: {
+        github: "https://github.com/miahamm44",
+        linkedin: "https://www.linkedin.com/in/mia-glover-3222ba24b/",
+      },
+    },
+    
   ]
 
   return (
