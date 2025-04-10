@@ -203,7 +203,7 @@ export default function TeamSection({ id }: TeamSectionProps) {
     {
       name: "Laura Zalewska",
       role: "B.S. Computer Science",
-      avatar: "TODO",
+      avatar: "laura-fuzzify-team.png",
       bio: "",
       social: {
         github: "https://github.com/laurazal",
