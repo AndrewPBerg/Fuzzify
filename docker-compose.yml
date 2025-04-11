@@ -103,6 +103,7 @@ services:
 
 volumes:
   mysql_data:
+    name: mysql_data
 
 networks:
   app-network:

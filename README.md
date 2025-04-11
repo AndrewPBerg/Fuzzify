@@ -25,7 +25,7 @@ As a workaround, if you are on an ARM-based system, please follow these steps:
 ```zsh
 docker volume create mysql_data
 ```
-### Step 2: Extract mysql_data_backup.tar.gz into the Docker volume
+### Step 2: Extract mysql_data_backup.tar.gz into local Docker Volumes
 ```zsh
 docker run --rm \
   -v mysql_data:/data \
@@ -34,7 +34,7 @@ docker run --rm \
   sh -c "rm -rf /data/* && tar -xzf /backup/mysql_data_backup.tar.gz -C /data"
 ```
 
-### Step 3: Build as usual
+### Step 3: Build
 ```zsh
 docker-compose up --build
 ```
