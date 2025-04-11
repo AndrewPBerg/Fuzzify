@@ -12,11 +12,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome and ChromeDriver
-RUN apt-get update && apt-get install -y wget unzip && \
-    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    apt install -y ./google-chrome-stable_current_amd64.deb && \
-    rm google-chrome-stable_current_amd64.deb && \
-    apt-get clean
+
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        apt-get update && apt-get install -y wget unzip && \
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+        apt install -y ./google-chrome-stable_current_amd64.deb && \
+        rm google-chrome-stable_current_amd64.deb && \
+        apt-get clean; \
+    else \
+        echo "Skipping Chrome installation: not an amd64 system"; \
+    fi
 
 # Set working directory
 WORKDIR /app
