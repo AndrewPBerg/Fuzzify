@@ -5,13 +5,19 @@ import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
 import { RiskGraph } from "@/components/dashboard/RiskGraph";
-import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar, Play } from "lucide-react";
+import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar, Play, HelpCircle } from "lucide-react";
 import { useDomains } from "@/lib/api/domains";
 import { userStorage, useUserSettings } from "@/lib/api/users";
 import { useCountPermutations } from "@/lib/api/permuatations";
 import { useSchedules } from "@/lib/api/schedule";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function HomePage() {
   const router = useRouter();
@@ -164,20 +170,91 @@ export default function HomePage() {
                     className="flex items-center justify-between p-3 rounded-md bg-background/50 border border-border/50"
                   >
                     <div className="flex items-center gap-3">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{domain.domain_name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {domain.ip_address}
-                        </span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{domain.ip_address}</span>
+                          {domain.last_scan && (
+                            <span>
+                              · Last scan: {new Date(domain.last_scan).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    
                     <div className="flex items-center gap-3">
-                      {domain.last_scan && (
-                        <span className="text-xs text-muted-foreground">
-                          Last scan: {new Date(domain.last_scan).toLocaleDateString()}
-                        </span>
+                      {domain.risk_counts && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-3 pr-2 border-r border-border/50">
+                                {domain.risk_counts.high > 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                                    <span className="text-xs font-medium">{domain.risk_counts.high}</span>
+                                  </div>
+                                ) : null}
+                                
+                                {domain.risk_counts.medium > 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                                    <span className="text-xs font-medium">{domain.risk_counts.medium}</span>
+                                  </div>
+                                ) : null}
+                                
+                                {domain.risk_counts.low > 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                    <span className="text-xs font-medium">{domain.risk_counts.low}</span>
+                                  </div>
+                                ) : null}
+                                
+                                {domain.risk_counts.unknown > 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                                    <span className="text-xs font-medium">{domain.risk_counts.unknown}</span>
+                                  </div>
+                                ) : null}
+                                
+                                {domain.risk_counts.high === 0 && 
+                                 domain.risk_counts.medium === 0 && 
+                                 domain.risk_counts.low === 0 &&
+                                 domain.risk_counts.unknown === 0 ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-gray-300"></div>
+                                    <span className="text-xs font-medium text-muted-foreground">No risks</span>
+                                  </div>
+                                ) : null}
+                                
+                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs p-1">
+                                <div className="font-semibold mb-1">Risk Distribution</div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                                  <span>High Risk</span>
+                                </div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                                  <span>Medium Risk</span>
+                                </div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                                  <span>Low Risk</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                                  <span>Unknown Risk</span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
+                      
                       <Button
                         variant="default"
                         size="sm"
