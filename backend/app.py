@@ -8,10 +8,9 @@ from dotenv import load_dotenv
 from google.cloud import pubsub_v1
 import logging
 import time
-from models import User, Domain, Permutation, Schedule, ImagePhishingDomain, PhishingDomain
+from models import User, Domain, Permutation, Schedule
 import threading
 from uuid import uuid4
-from test_perm import generate_and_store_permutations
 from datetime import datetime, timedelta
 
 LOG_DIR = "logs/pubsub"
@@ -27,7 +26,7 @@ def write_pubsub_log(message_data):
 
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
+DROP_TABLES = True  # Temporarily set to True to recreate tables with new schem
 MAX_THREADS = os.cpu_count() - 1 if os.cpu_count() is not None else None
 
 # Set up logging
@@ -533,7 +532,7 @@ def handle_permutations(user_id, domain_name):
             '--banner', 
             '--registered',
             '--format', 'json',
-            f'https://{root_domain}'
+            f'{root_domain}'
         ]
 
         try:
