@@ -26,6 +26,17 @@ As a workaround, if you are on an ARM-based system, please follow these steps:
 docker volume create mysql_data
 ```
 ### Step 2: Extract mysql_data_backup.tar.gz into local Docker Volumes
+
+> Windows
+```ps1
+docker run --rm `
+  -v mysql_data:/data `
+  -v ${PWD}:/backup `
+  alpine `
+  sh -c "rm -rf /data/* && tar -xzf /backup/mysql_data_backup.tar.gz -C /data"
+```
+
+> MacOS/Linux
 ```zsh
 docker run --rm \
   -v mysql_data:/data \
