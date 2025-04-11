@@ -584,10 +584,6 @@ def handle_permutations(user_id, domain_name):
             
             # use db session
             with Session(engine) as session:
-                processed_count = 0
-                skipped_count = 0
-                risk_levels = {"Unknown": 0, "low": 0, "medium": 0, "high": 0}
-                
                 # Get domain and user objects for updating
                 domain = session.exec(select(Domain).where(
                     (Domain.domain_name == root_domain) & 
@@ -601,6 +597,14 @@ def handle_permutations(user_id, domain_name):
                 if not user:
                     return jsonify({"error": "User not found"}), 404
                 
+                # Delete existing permutations for this domain
+                existing_permutations = session.exec(
+                    select(Permutation).where(Permutation.domain_name == root_domain)
+                ).all()
+                
+                for perm in existing_permutations:
+                    session.delete(perm)
+                
                 # Reset domain risk counts before adding new ones
                 user.high_risk_domains -= domain.high_risk_domains
                 user.medium_risk_domains -= domain.medium_risk_domains
@@ -611,6 +615,10 @@ def handle_permutations(user_id, domain_name):
                 domain.medium_risk_domains = 0
                 domain.low_risk_domains = 0
                 domain.unknown_domains = 0
+                
+                processed_count = 0
+                skipped_count = 0
+                risk_levels = {"Unknown": 0, "low": 0, "medium": 0, "high": 0}
                 
                 # Process new permutations
                 for permutation in obj:

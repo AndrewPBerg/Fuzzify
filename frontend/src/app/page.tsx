@@ -8,7 +8,7 @@ import { RiskGraph } from "@/components/dashboard/RiskGraph";
 import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar, Play, HelpCircle } from "lucide-react";
 import { useDomains, Domain, DomainsResponse } from "@/lib/api/domains";
 import { userStorage, useUserSettings } from "@/lib/api/users";
-import { useCountPermutations } from "@/lib/api/permuatations";
+import { useCountPermutations, useGeneratePermutations } from "@/lib/api/permuatations";
 import { useSchedules } from "@/lib/api/schedule";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ export default function HomePage() {
   const { data: userSettings, isLoading: userSettingsLoading } = useUserSettings(userId);
   
   const { data: permutationsCount } = useCountPermutations(userId);
+  const generatePermutationsMutation = useGeneratePermutations();
   
   // State for alerts - now from user settings instead of dummy data
   const [alertsCount, setAlertsCount] = useState<number>(0);
@@ -56,41 +57,30 @@ export default function HomePage() {
   };
 
   const handleRunNow = async (schedule: { schedule_id: string; domain_name: string }) => {
-    if (runningScans.has(schedule.schedule_id)) return;
-
-    setRunningScans(prev => new Set(Array.from(prev).concat(schedule.schedule_id)));
-    
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/${userId}/permutations/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          domain_name: schedule.domain_name,
-          schedule_id: schedule.schedule_id
-        }),
+      // Mark this scan as running
+      setRunningScans(prev => new Set(prev).add(schedule.schedule_id));
+      
+      // Call the mutation
+      await generatePermutationsMutation.mutateAsync({
+        userId,
+        domainName: schedule.domain_name
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to start scan');
-      }
-
-      toast.success('Scan started successfully', {
-        description: `Started scan for ${schedule.domain_name}`
-      });
+      
+      toast.success(`Scan started for ${schedule.domain_name}`);
     } catch (error) {
-      toast.error('Failed to start scan', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred'
-      });
+      console.error("Failed to start scan:", error);
+      toast.error(`Failed to start scan for ${schedule.domain_name}`);
     } finally {
+      // Remove from running scans when done
       setRunningScans(prev => {
-        const next = new Set(Array.from(prev));
-        next.delete(schedule.schedule_id);
-        return next;
+        const newSet = new Set(prev);
+        newSet.delete(schedule.schedule_id);
+        return newSet;
       });
     }
   };
+        
   
   // Safely access domains from the data
   const domains = data?.domains || [];
