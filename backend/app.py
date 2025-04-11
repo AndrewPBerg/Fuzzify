@@ -674,6 +674,25 @@ def handle_permutations(user_id, domain_name):
                 # Commit all changes
                 session.commit()
                 
+                # Log permutation scan results to pubsub logs
+                log_data = json.dumps({
+                    "type": "permutation_scan",
+                    "timestamp": datetime.now().isoformat(),
+                    "user_id": user_id,
+                    "domain": root_domain,
+                    "total_permutations": len(obj),
+                    "processed_count": processed_count,
+                    "skipped_count": skipped_count,
+                    "risk_levels": risk_levels,
+                    "risk_counts": {
+                        "high": domain.high_risk_domains,
+                        "medium": domain.medium_risk_domains,
+                        "low": domain.low_risk_domains,
+                        "unknown": domain.unknown_domains
+                    }
+                })
+                write_pubsub_log(log_data)
+                
                 return jsonify({
                     "message": "Permutations processed successfully",
                     "domain": root_domain,
@@ -691,12 +710,36 @@ def handle_permutations(user_id, domain_name):
             
         except subprocess.CalledProcessError as e:
             logger.error(f"Error occurred: {e.stderr}")
+            
+            # Log errors to pubsub logs
+            error_log = json.dumps({
+                "type": "permutation_scan_error",
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "domain": root_domain,
+                "error": "Failed to execute dnstwist command",
+                "details": str(e.stderr)
+            })
+            write_pubsub_log(error_log)
+            
             return jsonify({
                 "error": "Failed to execute dnstwist command",
                 "details": str(e.stderr)
             }), 500
         except Exception as e:
             logger.error(f"Database error occurred: {str(e)}")
+            
+            # Log database errors to pubsub logs
+            error_log = json.dumps({
+                "type": "permutation_db_error",
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "domain": root_domain,
+                "error": "Failed to process permutations",
+                "details": str(e)
+            })
+            write_pubsub_log(error_log)
+            
             return jsonify({
                 "error": "Failed to process permutations",
                 "details": str(e)
