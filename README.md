@@ -39,14 +39,7 @@ docker run --rm \
 docker-compose up --build
 ```
 
-> TODO: link the tarred file
-
-
-
-1. Download the premade database volume
-2. Use this volume to populate your locally hosted site
-
-This will allow you to run the application with full functionality, with the exception of the live website threat assessment feature.
+> This will allow you to run the application with full functionality, with the exception of the live website threat assessment feature.
 
 ### TODO instructions from installation to working w/ it to ARM.
 
