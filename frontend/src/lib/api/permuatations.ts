@@ -93,6 +93,8 @@ export function useGeneratePermutations() {
     mutationFn: generatePermutations,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["permutations", variables.userId, variables.domainName] });
+      // Also invalidate domains query to refresh risk counts and other domain data
+      queryClient.invalidateQueries({ queryKey: ["domains", variables.userId] });
       toast.success("Permutations generated", {
         description: `Domain permutations for "${variables.domainName}" have been generated`,
       });

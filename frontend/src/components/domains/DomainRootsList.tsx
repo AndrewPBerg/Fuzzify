@@ -23,6 +23,14 @@ export function DomainRootsList() {
   const deleteDomainMutation = useDeleteDomain();
   const generatePermutationsMutation = useGeneratePermutations();
 
+  // Add effect to refresh domains when permutations are generated
+  useEffect(() => {
+    if (generatePermutationsMutation.isSuccess) {
+      // Refetch domains data to update risk counts and other domain info
+      refetch();
+    }
+  }, [generatePermutationsMutation.isSuccess, refetch]);
+
   // Initial data load - prioritize API data on page load/reload
   useEffect(() => {
     const loadDomains = async () => {
