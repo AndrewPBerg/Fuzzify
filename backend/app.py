@@ -253,7 +253,13 @@ def specific_user_route(user_id):
                 "user_id": user.user_id,
                 "username": user.username,
                 "horizontal_sidebar": user.horizontal_sidebar,
-                "theme": user.theme
+                "theme": user.theme,
+                "risk_counts": {
+                    "high": user.high_risk_domains,
+                    "medium": user.medium_risk_domains,
+                    "low": user.low_risk_domains,
+                    "unknown": user.unknown_domains
+                }
             }), 200
     
     elif request.method == 'DELETE':
@@ -322,7 +328,13 @@ def specific_user_route(user_id):
                 "user_id": user_id,
                 "username": user.username,
                 "horizontal_sidebar": user.horizontal_sidebar,
-                "theme": user.theme
+                "theme": user.theme,
+                "risk_counts": {
+                    "high": user.high_risk_domains,
+                    "medium": user.medium_risk_domains,
+                    "low": user.low_risk_domains,
+                    "unknown": user.unknown_domains
+                }
             }), 200
 
 # Create a new user
@@ -384,9 +396,27 @@ def domain_route(user_id):
                 return jsonify({"error": "User not found"}), 404
                 
             domains = session.exec(select(Domain).where(Domain.user_id == user_id)).all()
-            domain_list = [{"domain_name": domain.domain_name, "total_scans": domain.total_scans} for domain in domains]
+            domain_list = [{
+                "domain_name": domain.domain_name, 
+                "total_scans": domain.total_scans,
+                "last_scan": domain.last_scan.isoformat() if domain.last_scan else None,
+                "risk_counts": {
+                    "high": domain.high_risk_domains,
+                    "medium": domain.medium_risk_domains,
+                    "low": domain.low_risk_domains,
+                    "unknown": domain.unknown_domains
+                }
+            } for domain in domains]
             
-        return jsonify({"domains": domain_list}), 200
+        return jsonify({
+            "domains": domain_list,
+            "user_risk_counts": {
+                "high": user.high_risk_domains,
+                "medium": user.medium_risk_domains,
+                "low": user.low_risk_domains,
+                "unknown": user.unknown_domains
+            }
+        }), 200
     
     elif request.method == 'DELETE':
         if DEBUG:
@@ -420,6 +450,13 @@ def domain_route(user_id):
             
             if not domain_to_delete:
                 return jsonify({"error": f"Domain '{domain_name}' not found for user {user_id}"}), 404
+            
+            # Update user's risk counts before deleting the domain
+            user.high_risk_domains -= domain_to_delete.high_risk_domains
+            user.medium_risk_domains -= domain_to_delete.medium_risk_domains
+            user.low_risk_domains -= domain_to_delete.low_risk_domains
+            user.unknown_domains -= domain_to_delete.unknown_domains
+            session.add(user)
                 
             # Delete the domain
             try:
@@ -516,7 +553,13 @@ def handle_permutations(user_id, domain_name):
             "message": "Permutations retrieved successfully",
             "domain": root_domain,
             "total_permutations": len(permutations_list),
-            "permutations": permutations_list
+            "permutations": permutations_list,
+            "risk_counts": {
+                "high": domain.high_risk_domains,
+                "medium": domain.medium_risk_domains,
+                "low": domain.low_risk_domains,
+                "unknown": domain.unknown_domains
+            }
         }), 200
     
     if request.method == 'POST':
@@ -545,6 +588,31 @@ def handle_permutations(user_id, domain_name):
                 skipped_count = 0
                 risk_levels = {"Unknown": 0, "low": 0, "medium": 0, "high": 0}
                 
+                # Get domain and user objects for updating
+                domain = session.exec(select(Domain).where(
+                    (Domain.domain_name == root_domain) & 
+                    (Domain.user_id == user_id)
+                )).first()
+                
+                if not domain:
+                    return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
+                
+                user = session.exec(select(User).where(User.user_id == user_id)).first()
+                if not user:
+                    return jsonify({"error": "User not found"}), 404
+                
+                # Reset domain risk counts before adding new ones
+                user.high_risk_domains -= domain.high_risk_domains
+                user.medium_risk_domains -= domain.medium_risk_domains
+                user.low_risk_domains -= domain.low_risk_domains
+                user.unknown_domains -= domain.unknown_domains
+                
+                domain.high_risk_domains = 0
+                domain.medium_risk_domains = 0
+                domain.low_risk_domains = 0
+                domain.unknown_domains = 0
+                
+                # Process new permutations
                 for permutation in obj:
                     if (permutation.get('tlsh') and permutation.get('phash')) is None:
                         skipped_count += 1
@@ -559,12 +627,16 @@ def handle_permutations(user_id, domain_name):
                         # classify risk levels
                         if risk == 0:
                             risk_level = "Unknown"
+                            domain.unknown_domains += 1
                         elif risk <= 25:
                             risk_level = "low"
+                            domain.low_risk_domains += 1
                         elif risk <= 50:
                             risk_level = "medium"
+                            domain.medium_risk_domains += 1
                         else:
                             risk_level = "high"
+                            domain.high_risk_domains += 1
                             
                         risk_levels[risk_level] += 1
                             
@@ -584,6 +656,20 @@ def handle_permutations(user_id, domain_name):
                         # Add to session
                         session.add(perm)
                         processed_count += 1
+                
+                # Update the domain's last scan time
+                domain.last_scan = datetime.now()
+                domain.total_scans += 1
+                
+                # Update user's aggregate risk counts
+                user.high_risk_domains += domain.high_risk_domains
+                user.medium_risk_domains += domain.medium_risk_domains
+                user.low_risk_domains += domain.low_risk_domains
+                user.unknown_domains += domain.unknown_domains
+                
+                # Update the domain record
+                session.add(domain)
+                session.add(user)
                             
                 # Commit all changes
                 session.commit()
@@ -594,7 +680,13 @@ def handle_permutations(user_id, domain_name):
                     "total_permutations": len(obj),
                     "processed_count": processed_count,
                     "skipped_count": skipped_count,
-                    "risk_levels": risk_levels
+                    "risk_levels": risk_levels,
+                    "domain_risk_counts": {
+                        "high": domain.high_risk_domains,
+                        "medium": domain.medium_risk_domains,
+                        "low": domain.low_risk_domains,
+                        "unknown": domain.unknown_domains
+                    }
                 }), 201
             
         except subprocess.CalledProcessError as e:
@@ -841,7 +933,15 @@ def count_user_permutations(user_id):
         ).all()
 
         if not user_domains:
-            return jsonify({"count": 0}), 200
+            return jsonify({
+                "count": 0, 
+                "risk_counts": {
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0,
+                    "unknown": 0
+                }
+            }), 200
 
         # Count permutations for all user's domains using a subquery
         total_count = session.exec(
@@ -850,7 +950,15 @@ def count_user_permutations(user_id):
             )
         ).first()
 
-        return jsonify({"count": total_count}), 200
+        return jsonify({
+            "count": total_count, 
+            "risk_counts": {
+                "high": user.high_risk_domains,
+                "medium": user.medium_risk_domains,
+                "low": user.low_risk_domains,
+                "unknown": user.unknown_domains
+            }
+        }), 200
 
 # ------------------------- Startup Sequence -------------------------
 

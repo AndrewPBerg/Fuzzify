@@ -12,6 +12,10 @@ class User(SQLModel, table=True):
     username: Optional[str] = Field(default=None) # user name
     horizontal_sidebar: bool = Field(default=False)
     theme: str = Field(default="system")
+    high_risk_domains: int = Field(default=0)
+    medium_risk_domains: int = Field(default=0)
+    low_risk_domains: int = Field(default=0)
+    unknown_domains: int = Field(default=0)
 
 #  Domain Table
 class Domain(SQLModel, table=True):
@@ -23,6 +27,10 @@ class Domain(SQLModel, table=True):
     ip_address: Optional[str] = Field(default=None)  # Resolved IP
     server: Optional[str] = Field(default=None)  # Web server info
     mail_server: Optional[str] = Field(default=None)  # Mail server info
+    high_risk_domains: int = Field(default=0)
+    medium_risk_domains: int = Field(default=0)
+    low_risk_domains: int = Field(default=0)
+    unknown_domains: int = Field(default=0)
 
 class Permutation(SQLModel, table=True):
     __table_args__ = {"extend_existing": True}

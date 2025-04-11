@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
+import { RiskGraph } from "@/components/dashboard/RiskGraph";
 import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar, Play } from "lucide-react";
 import { useDomains } from "@/lib/api/domains";
-import { userStorage } from "@/lib/api/users";
+import { userStorage, useUserSettings } from "@/lib/api/users";
 import { useCountPermutations } from "@/lib/api/permuatations";
 import { useSchedules } from "@/lib/api/schedule";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,21 @@ export default function HomePage() {
   const { userId } = userStorage.getCurrentUser();
   const { data: domains, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
   const { data: schedules, isLoading: schedulesLoading } = useSchedules(userId);
+  const { data: userSettings, isLoading: userSettingsLoading } = useUserSettings(userId);
   
   const { data: permutationsCount } = useCountPermutations(userId);
   
-  // State for alerts (dummy data for now)
-  const [alertsCount] = useState<number>(3);
+  // State for alerts - now from user settings instead of dummy data
+  const [alertsCount, setAlertsCount] = useState<number>(0);
   const [runningScans, setRunningScans] = useState<Set<string>>(new Set());
+
+  // Update alerts count when user settings load
+  useEffect(() => {
+    if (userSettings) {
+      // High risk domains are considered alerts
+      setAlertsCount(userSettings.risk_counts.high);
+    }
+  }, [userSettings]);
 
   const handleManageDomain = (domainName: string) => {
     localStorage.setItem('selectedDomain', domainName);
@@ -104,13 +114,26 @@ export default function HomePage() {
           variant="default"
         />
         
-        <StatusCard 
-          title="Alerts" 
-          value={alertsCount} 
-          icon={<AlertTriangle className="h-4 w-4" />}
-          description="Impersonations requiring attention"
-          variant="warning"
-        />
+        <div className="glass-card rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h3 className="text-sm font-medium">Risk Distribution</h3>
+              <p className="text-xs text-muted-foreground">Domain risk assessment</p>
+            </div>
+          </div>
+          
+          {userSettingsLoading ? (
+            <div className="h-[52px] flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            </div>
+          ) : userSettings ? (
+            <RiskGraph riskCounts={userSettings.risk_counts} />
+          ) : (
+            <div className="h-[52px] flex items-center justify-center text-sm text-muted-foreground">
+              No data available
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Domain List and Upcoming Runs */}
