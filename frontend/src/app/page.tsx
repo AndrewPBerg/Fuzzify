@@ -6,7 +6,7 @@ import { AlertBanner } from "@/components/dashboard/AlertBanner";
 import { StatusCard } from "@/components/dashboard/StatusCard";
 import { RiskGraph } from "@/components/dashboard/RiskGraph";
 import { Globe, Server, User, Shield, AlertTriangle, Settings, Calendar, Play, HelpCircle } from "lucide-react";
-import { useDomains, Domain } from "@/lib/api/domains";
+import { useDomains, Domain, DomainsResponse } from "@/lib/api/domains";
 import { userStorage, useUserSettings } from "@/lib/api/users";
 import { useCountPermutations } from "@/lib/api/permuatations";
 import { useSchedules } from "@/lib/api/schedule";
@@ -22,7 +22,7 @@ import {
 export default function HomePage() {
   const router = useRouter();
   const { userId } = userStorage.getCurrentUser();
-  const { data: domains, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
+  const { data, isLoading: domainsLoading, error: domainsError } = useDomains(userId);
   const { data: schedules, isLoading: schedulesLoading } = useSchedules(userId);
   const { data: userSettings, isLoading: userSettingsLoading } = useUserSettings(userId);
   
@@ -92,6 +92,9 @@ export default function HomePage() {
     }
   };
   
+  // Safely access domains from the data
+  const domains = data?.domains || [];
+  
   return (
     <div className="page-container">
       {/* Page header */}
@@ -106,7 +109,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatusCard 
           title="Domains" 
-          value={domainsLoading ? "Loading..." : domains?.domains.length || 0} 
+          value={domainsLoading ? "Loading..." : domains.length} 
           icon={<Globe className="h-4 w-4" />} 
           description="Active domains under monitoring" 
           variant="default"
@@ -158,13 +161,13 @@ export default function HomePage() {
               <div className="text-center text-muted-foreground h-full flex items-center justify-center">
                 Error loading domains
               </div>
-            ) : domains?.domains.length === 0 ? (
+            ) : domains.length === 0 ? (
               <div className="text-center text-muted-foreground h-full flex items-center justify-center">
                 No domains added yet
               </div>
             ) : (
               <div className="space-y-2 h-full overflow-y-auto">
-                {domains?.domains.map((domain: Domain) => (
+                {domains.map((domain: Domain) => (
                   <div
                     key={domain.domain_name}
                     className="flex items-center justify-between p-3 rounded-md bg-background/50 border border-border/50"

@@ -118,6 +118,10 @@ export function useDomains(userId: string) {
     staleTime: 60000, // Data remains fresh for 1 minute
     gcTime: 300000, // Keep cached data for 5 minutes
     enabled: !!userId, // Only run query if userId is provided
+    select: (data) => ({
+      domains: data.domains,
+      user_risk_counts: data.user_risk_counts
+    }),
   });
 }
 
