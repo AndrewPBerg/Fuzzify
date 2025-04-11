@@ -15,6 +15,41 @@
 </p>
 
 
+## ⚠️ **Important Note for ARM Users** ⚠️
+
+The dockerized version of this app uses Debian Linux. However, Google Chrome, which is required for the web scraping functionality that assesses website threats, does not have official releases for Debian on ARM architectures (including Apple M-series chips).
+As a workaround, if you are on an ARM-based system, please follow these steps:
+
+
+### Step 1: Create the Expected Docker Volume
+```zsh
+docker volume create mysql_data
+```
+### Step 2: Extract mysql_data_backup.tar.gz into the Docker volume
+```zsh
+docker run --rm \
+  -v mysql_data:/data \
+  -v "$(pwd)":/backup \
+  alpine \
+  sh -c "rm -rf /data/* && tar -xzf /backup/mysql_data_backup.tar.gz -C /data"
+```
+
+### Step 3: Build as usual
+```zsh
+docker-compose up --build
+```
+
+> TODO: link the tarred file
+
+
+
+1. Download the premade database volume
+2. Use this volume to populate your locally hosted site
+
+This will allow you to run the application with full functionality, with the exception of the live website threat assessment feature.
+
+### TODO instructions from installation to working w/ it to ARM.
+
 ## Installation 🏗️
 
 
