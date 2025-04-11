@@ -82,6 +82,13 @@ export function DomainRootsList() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [domainData, userId]);
 
+  // Sync with API data when domainData changes
+  useEffect(() => {
+    if (domainData?.domains) {
+      setDomains(domainData.domains);
+    }
+  }, [domainData]);
+
   const handleDeleteRoot = async (domain: Domain) => {
     try {
       // Delete from API first
