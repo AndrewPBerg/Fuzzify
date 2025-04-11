@@ -4,10 +4,15 @@ import { toast } from "sonner";
 export interface Permutation {
   permutation_name: string;  // Primary key
   domain_name: string;  // Foreign key to domain
+  fuzzer: string;  // Fuzzing method used
   server: string | null;  // Web server for variation
   mail_server: string | null;  // Mail server for variation
-  risk: boolean | null;  // High risk? True/False
+  risk: number | null;  // Risk score (numeric)
+  risk_level: 'Unknown' | 'low' | 'medium' | 'high';  // Risk level category
   ip_address: string | null;  // Associated IP address
+  tlsh: number | null;  // TLSH similarity score
+  phash: number | null;  // Perceptual hash similarity score
+  mx_spy?: boolean | null;  // Optional MX spy flag
 }
 
 // API functions

@@ -12,20 +12,28 @@ interface Domain {
   id?: number; // Added optional id field for React keys
   permutation_name: string;
   domain_name: string;
+  fuzzer: string; // Add fuzzer field
   server: string | null;
   mail_server: string | null;
-  risk: boolean | null;
   ip_address: string | null;
+  risk: number | null;
+  risk_level: 'Unknown' | 'low' | 'medium' | 'high'; // Properly type risk_level
+  tlsh: number | null; // Add tlsh field
+  phash: number | null; // Add phash field
 }
 
 // Define permutation item interface from API
 interface PermutationItem {
   permutation_name: string;
   domain_name: string;
+  fuzzer: string; // Add fuzzer field
   server: string | null;
   mail_server: string | null;
-  risk: boolean | null;
   ip_address: string | null;
+  risk: number | null;
+  risk_level: 'Unknown' | 'low' | 'medium' | 'high'; // Properly type risk_level
+  tlsh: number | null; // Add tlsh field
+  phash: number | null; // Add phash field
 }
 
 // Define permutations response interface
@@ -39,18 +47,18 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { key: "permutation_name", label: "Permutation Name" },
-  { key: "domain_name", label: "Domain Root" },
+  { key: "permutation_name", label: "Permutation" },
   { key: "ip_address", label: "IP Address" },
   { key: "server", label: "Web Server" },
   { key: "mail_server", label: "Mail Server" },
-  { key: "risk", label: "Risk Level" }
+  { key: "risk_level", label: "Risk Level" }
 ];
 
-const threatIcons = {
-  true: <ShieldAlert className="text-rose-500" size={16} />,
-  false: <ShieldCheck className="text-emerald-500" size={16} />,
-  null: <ShieldX className="text-blue-500" size={16} />
+const threatIcons: Record<Domain['risk_level'], React.ReactNode> = {
+  "high": <ShieldAlert className="text-rose-500" size={16} />,
+  "medium": <ShieldAlert className="text-orange-500" size={16} />,
+  "low": <ShieldCheck className="text-emerald-500" size={16} />,
+  "Unknown": <ShieldX className="text-blue-500" size={16} />
 };
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50];
@@ -62,6 +70,7 @@ export function DomainTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState<string>("all");
   const [selectedDomainRoot, setSelectedDomainRoot] = useState<string | null>(() => {
     // Initialize from localStorage if available, otherwise null
     if (typeof window !== 'undefined') {
@@ -70,6 +79,15 @@ export function DomainTable() {
     return null;
   });
   const [domainRoots, setDomainRoots] = useState<string[]>([]);
+  
+  // Risk level options ordered from high to low
+  const riskLevelOptions = [
+    { value: "all", label: "All Risk Levels" },
+    { value: "high", label: "High Risk" },
+    { value: "medium", label: "Medium Risk" },
+    { value: "low", label: "Low Risk" },
+    { value: "Unknown", label: "Unknown Risk" }
+  ];
   
   // Get userId from userStorage
   const { userId } = userStorage.getCurrentUser();
@@ -109,15 +127,38 @@ export function DomainTable() {
         : (permutationsData as PermutationsResponse).permutations || [];
       
       // Transform data to match our Domain interface
-      const transformedData = permutationsArray.map((item: PermutationItem, index: number) => ({
-        id: index + 1,
-        permutation_name: item.permutation_name,
-        domain_name: item.domain_name,
-        server: item.server,
-        mail_server: item.mail_server,
-        risk: item.risk,
-        ip_address: item.ip_address
-      }));
+      const transformedData = permutationsArray.map((item: any, index: number) => {
+        // Ensure risk_level is one of the valid types
+        const validRiskLevel = (item.risk_level === 'low' || 
+                               item.risk_level === 'medium' || 
+                               item.risk_level === 'high') 
+                               ? item.risk_level 
+                               : 'Unknown' as const;
+                              
+        // Debug the values being received
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Permutation item ${index}:`, {
+            tlsh: item.tlsh,
+            phash: item.phash,
+            risk: item.risk,
+            risk_level: item.risk_level
+          });
+        }
+                              
+        return {
+          id: index + 1,
+          permutation_name: item.permutation_name,
+          domain_name: item.domain_name,
+          fuzzer: item.fuzzer || "", 
+          server: item.server,
+          mail_server: item.mail_server,
+          risk: typeof item.risk === 'number' ? item.risk : null,
+          risk_level: validRiskLevel,
+          ip_address: item.ip_address,
+          tlsh: typeof item.tlsh === 'number' ? item.tlsh : null,
+          phash: typeof item.phash === 'number' ? item.phash : null
+        } as Domain;
+      });
       
       setDomains(transformedData);
     } else if (!selectedDomainRoot) {
@@ -150,19 +191,40 @@ export function DomainTable() {
       value => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
     
-    return matchesSearch;
+    // Apply risk level filter
+    const matchesRiskLevel = selectedRiskLevel === "all" || domain.risk_level === selectedRiskLevel;
+    
+    return matchesSearch && matchesRiskLevel;
+  });
+
+  // Sort domains by risk level (high > medium > low > Unknown)
+  const sortedDomains = [...filteredDomains].sort((a, b) => {
+    // Create an explicit order map with numeric values
+    const riskOrder: Record<string, number> = { 
+      "high": 0, 
+      "medium": 1, 
+      "low": 2, 
+      "Unknown": 3 
+    };
+    
+    // Get the numeric values for each risk level, defaulting to 3 (Unknown) if not found
+    const aValue = typeof a.risk_level === 'string' ? (riskOrder[a.risk_level] ?? 3) : 3;
+    const bValue = typeof b.risk_level === 'string' ? (riskOrder[b.risk_level] ?? 3) : 3;
+    
+    // Sort by the numeric values (lower values first)
+    return aValue - bValue;
   });
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredDomains.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedDomains.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPageData = filteredDomains.slice(startIndex, endIndex);
+  const currentPageData = sortedDomains.slice(startIndex, endIndex);
 
   // Reset to first page when filters or items per page change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedDomainRoot, itemsPerPage]);
+  }, [searchQuery, selectedDomainRoot, selectedRiskLevel, itemsPerPage]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -224,12 +286,13 @@ export function DomainTable() {
   // Clear filters
   const clearFilters = () => {
     setSearchQuery("");
+    setSelectedRiskLevel("all");
   };
 
   return (
     <div className="glass-card rounded-lg overflow-hidden shadow-sm animate-scale-in">
       <div className="p-4 border-b border-border/50">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Domain Root Selector */}
           <div>
             <select
@@ -240,6 +303,19 @@ export function DomainTable() {
               <option value="">Select Domain Root</option>
               {domainRoots.map((root) => (
                 <option key={root} value={root}>{root}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Risk Level Filter */}
+          <div>
+            <select
+              value={selectedRiskLevel}
+              onChange={(e) => setSelectedRiskLevel(e.target.value)}
+              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
+            >
+              {riskLevelOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
@@ -260,13 +336,13 @@ export function DomainTable() {
         </div>
         
         {/* Clear filters button */}
-        {searchQuery && (
+        {(searchQuery || selectedRiskLevel !== "all") && (
           <div className="flex justify-end mt-3">
             <button
               onClick={clearFilters}
               className="text-xs py-1 px-2.5 text-muted-foreground border border-border/50 rounded-lg hover:bg-background transition-colors"
             >
-              Clear Search
+              Clear Filters
             </button>
           </div>
         )}
@@ -324,11 +400,9 @@ export function DomainTable() {
                   key={domain.id}
                   className="hover:bg-muted/20 transition-colors"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {domain.permutation_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.domain_name}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium">{domain.permutation_name}</div>
+                    <div className="text-xs text-muted-foreground">{domain.fuzzer}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {domain.ip_address || "N/A"}
@@ -341,19 +415,15 @@ export function DomainTable() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-1.5">
-                      {domain.risk === true ? 
-                        threatIcons.true : 
-                        domain.risk === false ? 
-                          threatIcons.false : 
-                          threatIcons.null}
+                      {threatIcons[domain.risk_level] || threatIcons["Unknown"]}
                       <span className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium",
-                        domain.risk === true && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                        domain.risk === false && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                        domain.risk === null && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                        domain.risk_level === "high" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+                        domain.risk_level === "medium" && "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400",
+                        domain.risk_level === "low" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+                        domain.risk_level === "Unknown" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
                       )}>
-                        {domain.risk === true ? "High Risk" : 
-                          domain.risk === false ? "Low Risk" : "Unknown"}
+                        {domain.risk_level}
                       </span>
                     </div>
                   </td>
@@ -369,7 +439,7 @@ export function DomainTable() {
         <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredDomains.length)} of {filteredDomains.length} domains
+              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
             </span>
             <div className="flex items-center gap-1">
               <span className="text-sm text-muted-foreground">Rows:</span>
