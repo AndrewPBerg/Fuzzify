@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Shield, ShieldAlert, ShieldCheck, ShieldX, Loader2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePermutations } from "@/lib/api/permuatations";
@@ -401,17 +401,28 @@ export function DomainTable() {
                   className="hover:bg-muted/20 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium">{domain.permutation_name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-medium">{domain.permutation_name}</div>
+                      <a 
+                        href={`https://${domain.permutation_name}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title={`Visit ${domain.permutation_name}`}
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
                     <div className="text-xs text-muted-foreground">{domain.fuzzer}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {domain.ip_address || "N/A"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.server || "Unknown"}
+                    {domain.server || ""}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.mail_server || "Unknown"}
+                    {domain.mail_server || ""}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-1.5">
