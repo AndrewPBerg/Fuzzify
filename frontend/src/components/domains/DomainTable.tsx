@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePermutations } from "@/lib/api/permuatations";
 import { userStorage } from "@/lib/api/users";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Define domain interface
 interface Domain {
@@ -22,23 +23,9 @@ interface Domain {
   phash: number | null; // Add phash field
 }
 
-// Define permutation item interface from API
-interface PermutationItem {
-  permutation_name: string;
-  domain_name: string;
-  fuzzer: string; // Add fuzzer field
-  server: string | null;
-  mail_server: string | null;
-  ip_address: string | null;
-  risk: number | null;
-  risk_level: 'Unknown' | 'low' | 'medium' | 'high'; // Properly type risk_level
-  tlsh: number | null; // Add tlsh field
-  phash: number | null; // Add phash field
-}
-
 // Define permutations response interface
 interface PermutationsResponse {
-  permutations: PermutationItem[];
+  permutations: Domain[];
 }
 
 interface Column {
@@ -62,6 +49,11 @@ const threatIcons: Record<Domain['risk_level'], React.ReactNode> = {
 };
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50];
+
+const tooltipStyles = {
+  content: "z-[999] bg-white dark:bg-gray-800 text-black dark:text-white p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 max-w-[250px]", 
+  arrow: "fill-white dark:fill-gray-800"
+}
 
 export function DomainTable() {
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -123,7 +115,7 @@ export function DomainTable() {
       // Check if the response has a permutations property (from backend API)
       // or if it's already an array of permutation objects
       const permutationsArray = Array.isArray(permutationsData) 
-        ? permutationsData as PermutationItem[]
+        ? permutationsData as Domain[]
         : (permutationsData as PermutationsResponse).permutations || [];
       
       // Transform data to match our Domain interface
@@ -290,222 +282,237 @@ export function DomainTable() {
   };
 
   return (
-    <div className="glass-card rounded-lg overflow-hidden shadow-sm animate-scale-in">
-      <div className="p-4 border-b border-border/50">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Domain Root Selector */}
-          <div>
-            <select
-              value={selectedDomainRoot || ""}
-              onChange={(e) => setSelectedDomainRoot(e.target.value || null)}
-              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
-            >
-              <option value="">Select Domain Root</option>
-              {domainRoots.map((root) => (
-                <option key={root} value={root}>{root}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Risk Level Filter */}
-          <div>
-            <select
-              value={selectedRiskLevel}
-              onChange={(e) => setSelectedRiskLevel(e.target.value)}
-              className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
-            >
-              {riskLevelOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Search */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-              <Search size={16} />
-            </div>
-            <input
-              type="text"
-              className="pl-10 pr-4 py-2 bg-background/50 border border-border/50 rounded-lg text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary/50"
-              placeholder="Search domains..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-        
-        {/* Clear filters button */}
-        {(searchQuery || selectedRiskLevel !== "all") && (
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={clearFilters}
-              className="text-xs py-1 px-2.5 text-muted-foreground border border-border/50 rounded-lg hover:bg-background transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="overflow-x-auto">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Loading domain data...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <ShieldAlert className="h-8 w-8 text-rose-500 mb-4" />
-            <p className="text-muted-foreground mb-2">{error}</p>
-            <button 
-              onClick={() => setSelectedDomainRoot(selectedDomainRoot)}
-              className="text-xs py-1.5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        ) : domains.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <Shield className="h-8 w-8 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">No domains found.</p>
-            {!selectedDomainRoot && domainRoots.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Please select a domain root to view permutations.
-              </p>
-            )}
-            {domainRoots.length === 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Add domain roots in the Domain Roots section above.
-              </p>
-            )}
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-muted/30">
-                {columns.map((column) => (
-                  <th 
-                    key={column.key}
-                    className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                  >
-                    {column.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {currentPageData.map((domain) => (
-                <tr 
-                  key={domain.id}
-                  className="hover:bg-muted/20 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <div className="text-sm font-medium">{domain.permutation_name}</div>
-                      <a 
-                        href={`https://${domain.permutation_name}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                        title={`Visit ${domain.permutation_name}`}
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{domain.fuzzer}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.ip_address || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.server || ""}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {domain.mail_server || ""}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center gap-1.5">
-                      {threatIcons[domain.risk_level] || threatIcons["Unknown"]}
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs font-medium",
-                        domain.risk_level === "high" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
-                        domain.risk_level === "medium" && "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400",
-                        domain.risk_level === "low" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-                        domain.risk_level === "Unknown" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                      )}>
-                        {domain.risk_level}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Pagination - only show if we have data */}
-      {!loading && !error && domains.length > 0 && (
-        <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
-            </span>
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-muted-foreground">Rows:</span>
+    <TooltipProvider delayDuration={300}>
+      <div className="glass-card rounded-lg overflow-hidden shadow-sm animate-scale-in">
+        <div className="p-4 border-b border-border/50">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Domain Root Selector */}
+            <div>
               <select
-                value={itemsPerPage}
-                onChange={handleItemsPerPageChange}
-                className="py-1 px-2 text-xs bg-background/50 border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                value={selectedDomainRoot || ""}
+                onChange={(e) => setSelectedDomainRoot(e.target.value || null)}
+                className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
               >
-                {ITEMS_PER_PAGE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>{option}</option>
+                <option value="">Select Domain Root</option>
+                {domainRoots.map((root) => (
+                  <option key={root} value={root}>{root}</option>
                 ))}
               </select>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-1">
-            <button
-              className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft size={14} />
-            </button>
-            
-            <div className="flex items-center space-x-1">
-              {getPageNumbers().map((page, index) => (
-                typeof page === 'number' ? (
-                  <button
-                    key={`page-${page}`}
-                    onClick={() => handlePageChange(page)}
-                    className={cn(
-                      "min-w-7 h-7 rounded-md text-xs",
-                      page === currentPage 
-                        ? "bg-primary text-primary-foreground" 
-                        : "border border-border/50 hover:bg-muted/20"
-                    )}
-                  >
-                    {page}
-                  </button>
-                ) : (
-                  <span key={`ellipsis-${index}`} className="w-7 text-center">…</span>
-                )
-              ))}
+
+            {/* Risk Level Filter */}
+            <div>
+              <select
+                value={selectedRiskLevel}
+                onChange={(e) => setSelectedRiskLevel(e.target.value)}
+                className="w-full p-2 text-sm bg-background/50 border border-border/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50"
+              >
+                {riskLevelOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </div>
             
-            <button
-              className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight size={14} />
-            </button>
+            {/* Search */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
+                <Search size={16} />
+              </div>
+              <input
+                type="text"
+                className="pl-10 pr-4 py-2 bg-background/50 border border-border/50 rounded-lg text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary/50"
+                placeholder="Search domains..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
+          
+          {/* Clear filters button */}
+          {(searchQuery || selectedRiskLevel !== "all") && (
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={clearFilters}
+                className="text-xs py-1 px-2.5 text-muted-foreground border border-border/50 rounded-lg hover:bg-background transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading domain data...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <ShieldAlert className="h-8 w-8 text-rose-500 mb-4" />
+              <p className="text-muted-foreground mb-2">{error}</p>
+              <button 
+                onClick={() => setSelectedDomainRoot(selectedDomainRoot)}
+                className="text-xs py-1.5 px-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : domains.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <Shield className="h-8 w-8 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">No domains found.</p>
+              {!selectedDomainRoot && domainRoots.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Please select a domain root to view permutations.
+                </p>
+              )}
+              {domainRoots.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Add domain roots in the Domain Roots section above.
+                </p>
+              )}
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="bg-muted/30">
+                  {columns.map((column) => (
+                    <th 
+                      key={column.key}
+                      className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                    >
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {currentPageData.map((domain) => (
+                  <tr 
+                    key={domain.id}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-sm font-medium">{domain.permutation_name}</div>
+                        <a 
+                          href={`https://${domain.permutation_name}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          title={`Visit ${domain.permutation_name}`}
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{domain.fuzzer}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {domain.ip_address || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {domain.server || ""}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {domain.mail_server || ""}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-1.5">
+                        {threatIcons[domain.risk_level] || threatIcons["Unknown"]}
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <button type="button" className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium",
+                              domain.risk_level === "high" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
+                              domain.risk_level === "medium" && "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400",
+                              domain.risk_level === "low" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
+                              domain.risk_level === "Unknown" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                            )}>
+                              {domain.risk_level}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className={tooltipStyles.content}>
+                            <div>
+                              <div className="font-medium text-sm mb-1">Similarity Metrics</div>
+                              <div className="space-y-1 text-xs">
+                                <div><span className="font-medium">TLSH:</span> {domain.tlsh !== null ? domain.tlsh : 'N/A'}</div>
+                                <div><span className="font-medium">pHash:</span> {domain.phash !== null ? domain.phash : 'N/A'}</div>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination - only show if we have data */}
+        {!loading && !error && domains.length > 0 && (
+          <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Showing {currentPageData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, sortedDomains.length)} of {sortedDomains.length} domains
+              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted-foreground">Rows:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={handleItemsPerPageChange}
+                  className="py-1 px-2 text-xs bg-background/50 border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                >
+                  {ITEMS_PER_PAGE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-1">
+              <button
+                className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              
+              <div className="flex items-center space-x-1">
+                {getPageNumbers().map((page, index) => (
+                  typeof page === 'number' ? (
+                    <button
+                      key={`page-${page}`}
+                      onClick={() => handlePageChange(page)}
+                      className={cn(
+                        "min-w-7 h-7 rounded-md text-xs",
+                        page === currentPage 
+                          ? "bg-primary text-primary-foreground" 
+                          : "border border-border/50 hover:bg-muted/20"
+                      )}
+                    >
+                      {page}
+                    </button>
+                  ) : (
+                    <span key={`ellipsis-${index}`} className="w-7 text-center">…</span>
+                  )
+                ))}
+              </div>
+              
+              <button
+                className="p-1 rounded-md border border-border/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
