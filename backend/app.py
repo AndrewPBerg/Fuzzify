@@ -519,64 +519,104 @@ def handle_permutations(user_id, domain_name):
                 domain = session.exec(select(Domain).where(Domain.domain_name == root_domain)).first()
                 if not domain:
                     # Create domain entry if not already present
+                    logger.debug(f"Domain {root_domain} not found for user {user_id}, creating new domain entry")
                     domain = Domain(domain_name=root_domain, user_id=user.user_id)
                     session.add(domain)
                     session.commit()
                     session.refresh(domain)
+                else:
+                    logger.debug(f"Domain {root_domain} found for user {user_id}")
 
                 def run_dnstwist(domain_name, mode):
                     # Extract the root domain (remove path components) to avoid command line issues
                     root_domain = domain_name.split('/')[0]
                     
-                    command = [
-                        'dnstwist',
-                        '--phash' if mode == 'phash' else '--lsh', 'tlsh' if mode == 'lsh' else '',
-                        '--mx', '--banner', '--format', 'json'
-                    ]
+                    # Fixed command construction based on mode
                     if mode == 'phash':
-                        command += [f'https://{root_domain}']
-                    command.append(root_domain)
+                        command = [
+                            'dnstwist', 
+                            '--phash', 
+                            '--mx', 
+                            '--banner', 
+                            '--format', 'json',
+                            f'https://{root_domain}'
+                        ]
+                    else:  # lsh mode
+                        command = [
+                            'dnstwist',
+                            '--lsh', 'tlsh',
+                            '--mx',
+                            '--banner',
+                            '--format', 'json',
+                            root_domain
+                        ]
                     
                     logger.debug(f"Running dnstwist command: {' '.join(command)}")
                     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    
                     if result.returncode != 0:
-                        logger.error(f"dnstwist error: {result.stderr}")
+                        logger.error(f"dnstwist error for {mode}: {result.stderr}")
                         return []
+                        
                     try:
-                        return json.loads(result.stdout)
-                    except json.JSONDecodeError:
-                        logger.error("Failed to decode JSON from dnstwist")
+                        data = json.loads(result.stdout)
+                        logger.debug(f"dnstwist {mode} returned {len(data)} results")
+                        return data
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to decode JSON from dnstwist ({mode}): {e}")
+                        logger.debug(f"Raw output: {result.stdout[:500]}...")  # Log first 500 chars of output
                         return []
 
                 def extract_ip_and_mail(entry):
                     ip = None
                     mail = None
+                    
+                    # Extract mail server info
                     if isinstance(entry.get("dns_mx"), list) and entry["dns_mx"]:
                         mail = entry["dns_mx"][0]
                     elif isinstance(entry.get("dns_mx"), str):
                         mail = entry["dns_mx"]
+                        
+                    # Extract IP address info
                     if isinstance(entry.get("dns_a"), list) and entry["dns_a"]:
                         ip = entry["dns_a"][0]
                     elif isinstance(entry.get("dns_aaaa"), list) and entry["dns_aaaa"]:
                         ip = entry["dns_aaaa"][0]
+                        
+                    logger.debug(f"Extracted IP: {ip}, Mail: {mail} for domain {entry.get('domain', 'unknown')}")
                     return mail, ip
 
                 def process_results(data, threshold, mode):
+                    logger.debug(f"Processing {len(data)} results for {mode} with threshold {threshold}")
                     hits = []
                     for entry in data:
                         permutation_name = entry.get("domain")
-                        similarity = entry.get("fuzzy_hash_similarity") if mode == "lsh" else entry.get("phash")
+                        
+                        # Get similarity score based on mode
+                        if mode == "lsh":
+                            similarity = entry.get("fuzzy_hash_similarity")
+                            logger.debug(f"LSH similarity for {permutation_name}: {similarity}")
+                        else:  # phash mode
+                            similarity = entry.get("phash")
+                            logger.debug(f"pHash similarity for {permutation_name}: {similarity}")
+                            
                         if not permutation_name:
+                            logger.warning("Skipping entry without domain name")
                             continue
 
                         mail_server, ip_address = extract_ip_and_mail(entry)
                         server = entry.get("banner_http") or entry.get("http_server")
-
+                        
+                        logger.debug(f"Looking for existing permutation: {permutation_name}")
                         permutation = session.exec(
-                            select(Permutation).where(Permutation.permutation_name == permutation_name)
+                            select(Permutation).where(
+                                (Permutation.permutation_name == permutation_name) &
+                                (Permutation.domain_name == domain.domain_name)
+                            )
                         ).first()
 
                         if not permutation:
+                            logger.debug(f"Creating new permutation record for {permutation_name}")
                             permutation = Permutation(
                                 permutation_name=permutation_name,
                                 domain_name=domain.domain_name,
@@ -586,37 +626,64 @@ def handle_permutations(user_id, domain_name):
                                 mx_spy=entry.get("mx_spy")
                             )
                             session.add(permutation)
-                            session.commit()
-                            session.refresh(permutation)
+                            try:
+                                session.commit()
+                                logger.debug(f"Successfully added permutation {permutation_name}")
+                                session.refresh(permutation)
+                            except Exception as e:
+                                logger.error(f"Error adding permutation {permutation_name}: {e}")
+                                session.rollback()
+                                continue
 
                         if similarity is not None and similarity >= threshold:
+                            logger.debug(f"Hit found! {permutation_name} with {similarity} score (threshold: {threshold})")
                             shared_fields = {
                                 "domain_name": domain.domain_name,
                                 "permutation_name": permutation_name,
                                 "url": entry.get("url"),
                                 "similarity_score": similarity,
                                 "method": mode,
-                                "created_at": datetime.now(datetime.timezone.utc),  # Changed to use utcnow() instead of datetime.now(timezone.utc)
+                                "created_at": datetime.now(datetime.timezone.utc),
                                 "server": server,
                                 "mail_server": mail_server,
                                 "ip_address": ip_address
                             }
-                            if mode == "lsh":
-                                hit = PhishingDomain(**shared_fields)
-                            else:
-                                hit = ImagePhishingDomain(**shared_fields)
-                            session.add(hit)
-                            hits.append(hit)
-                    session.commit()
+                            try:
+                                if mode == "lsh":
+                                    hit = PhishingDomain(**shared_fields)
+                                else:
+                                    hit = ImagePhishingDomain(**shared_fields)
+                                session.add(hit)
+                                session.commit()
+                                hits.append(hit)
+                                logger.debug(f"Successfully added hit record for {permutation_name}")
+                            except Exception as e:
+                                logger.error(f"Error adding hit record for {permutation_name}: {e}")
+                                session.rollback()
+                    logger.debug(f"Total {mode} hits found: {len(hits)}")
                     return hits
 
                 # Run and process both LSH and pHash
+                logger.debug("Starting LSH scan...")
                 lsh_data = run_dnstwist(root_domain, mode="lsh")
+                
+                logger.debug("Starting pHash scan...")
                 phash_data = run_dnstwist(root_domain, mode="phash")
 
-                lsh_hits = process_results(lsh_data, threshold=40, mode="lsh")
-                phash_hits = process_results(phash_data, threshold=60, mode="phash")
+                # Update domain scan count
+                try:
+                    domain.total_scans += 1
+                    session.add(domain)
+                    session.commit()
+                    logger.debug(f"Updated scan count for domain {root_domain}: {domain.total_scans}")
+                except Exception as e:
+                    logger.error(f"Error updating scan count: {e}")
+                    session.rollback()
 
+                lsh_hits = process_results(lsh_data, threshold=4, mode="lsh")
+                phash_hits = process_results(phash_data, threshold=6, mode="phash")
+
+                logger.debug(f"Scan complete. LSH hits: {len(lsh_hits)}, pHash hits: {len(phash_hits)}")
             return jsonify({
                 "message": "dnstwist scan complete.",
                 "lsh_hits": [hit.permutation_name for hit in lsh_hits],
