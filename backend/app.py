@@ -566,6 +566,8 @@ def handle_permutations(user_id, domain_name):
         if DEBUG:
             logger.debug(f"Received request to generate permutations for domain {root_domain}")
 
+
+        # actual command for dnstwist
         command = [
             'dnstwist', 
             '--lsh', 'tlsh',
