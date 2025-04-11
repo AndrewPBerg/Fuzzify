@@ -1,8 +1,14 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-interface Domain {
+export interface RiskCounts {
+  high: number;
+  medium: number;
+  low: number;
+  unknown: number;
+}
+
+export interface Domain {
   domain_name: string;
   user_id: string;
   last_scan?: string | null;
@@ -10,6 +16,12 @@ interface Domain {
   ip_address?: string | null;
   server?: string | null;
   mail_server?: string | null;
+  risk_counts?: RiskCounts;
+}
+
+export interface DomainsResponse {
+  domains: Domain[];
+  user_risk_counts: RiskCounts;
 }
 
 interface CreateDomainResponse {
@@ -20,7 +32,7 @@ interface CreateDomainResponse {
 // API functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10001';
 
-const fetchDomains = async (userId: string): Promise<Domain[]> => {
+const fetchDomains = async (userId: string): Promise<DomainsResponse> => {
   const response = await fetch(`${API_BASE_URL}/api/${userId}/domain`);
   if (!response.ok) {
     throw new Error("Failed to fetch domains");
@@ -32,7 +44,15 @@ const fetchDomains = async (userId: string): Promise<Domain[]> => {
     // Store domains in localStorage
     localStorage.setItem("domainRoots", JSON.stringify(data.domains.map((d: Domain) => d.domain_name)));
     
-    return data.domains;
+    return {
+      domains: data.domains,
+      user_risk_counts: data.user_risk_counts || {
+        high: 0,
+        medium: 0,
+        low: 0,
+        unknown: 0
+      }
+    };
   } catch (error) {
     console.error("JSON parsing error:", error);
     throw new Error("Invalid response format from server");
@@ -98,6 +118,10 @@ export function useDomains(userId: string) {
     staleTime: 60000, // Data remains fresh for 1 minute
     gcTime: 300000, // Keep cached data for 5 minutes
     enabled: !!userId, // Only run query if userId is provided
+    select: (data) => ({
+      domains: data.domains,
+      user_risk_counts: data.user_risk_counts
+    }),
   });
 }
 

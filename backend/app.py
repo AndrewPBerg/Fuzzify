@@ -11,7 +11,6 @@ import time
 from models import User, Domain, Permutation, Schedule
 import threading
 from uuid import uuid4
-from test_perm import generate_and_store_permutations
 from datetime import datetime, timedelta
 
 LOG_DIR = "logs/pubsub"
@@ -28,6 +27,7 @@ def write_pubsub_log(message_data):
 # Enable Debugging for Logs
 DEBUG = True
 DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
+MAX_THREADS = os.cpu_count() - 1 if os.cpu_count() is not None else None
 
 # Set up logging
 import logging
@@ -35,12 +35,11 @@ import logging
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Suppress noisy Pub/Sub debug logs from external libraries
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager').setLevel(logging.INFO)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.dispatcher').setLevel(logging.INFO)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
-logging.getLogger('google.cloud.pubsub_v1.publisher._batch.thread').setLevel(logging.INFO)
-logging.getLogger('google.api_core.bidi').setLevel(logging.INFO)
+# Completely disable the noisy leaser logs
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.CRITICAL)
+# Also silence other related logs
+logging.getLogger('google.cloud.pubsub_v1').setLevel(logging.WARNING)
+logging.getLogger('google.api_core').setLevel(logging.WARNING)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
@@ -254,7 +253,13 @@ def specific_user_route(user_id):
                 "user_id": user.user_id,
                 "username": user.username,
                 "horizontal_sidebar": user.horizontal_sidebar,
-                "theme": user.theme
+                "theme": user.theme,
+                "risk_counts": {
+                    "high": user.high_risk_domains,
+                    "medium": user.medium_risk_domains,
+                    "low": user.low_risk_domains,
+                    "unknown": user.unknown_domains
+                }
             }), 200
     
     elif request.method == 'DELETE':
@@ -323,7 +328,13 @@ def specific_user_route(user_id):
                 "user_id": user_id,
                 "username": user.username,
                 "horizontal_sidebar": user.horizontal_sidebar,
-                "theme": user.theme
+                "theme": user.theme,
+                "risk_counts": {
+                    "high": user.high_risk_domains,
+                    "medium": user.medium_risk_domains,
+                    "low": user.low_risk_domains,
+                    "unknown": user.unknown_domains
+                }
             }), 200
 
 # Create a new user
@@ -385,9 +396,27 @@ def domain_route(user_id):
                 return jsonify({"error": "User not found"}), 404
                 
             domains = session.exec(select(Domain).where(Domain.user_id == user_id)).all()
-            domain_list = [{"domain_name": domain.domain_name, "total_scans": domain.total_scans} for domain in domains]
+            domain_list = [{
+                "domain_name": domain.domain_name, 
+                "total_scans": domain.total_scans,
+                "last_scan": domain.last_scan.isoformat() if domain.last_scan else None,
+                "risk_counts": {
+                    "high": domain.high_risk_domains,
+                    "medium": domain.medium_risk_domains,
+                    "low": domain.low_risk_domains,
+                    "unknown": domain.unknown_domains
+                }
+            } for domain in domains]
             
-        return jsonify({"domains": domain_list}), 200
+        return jsonify({
+            "domains": domain_list,
+            "user_risk_counts": {
+                "high": user.high_risk_domains,
+                "medium": user.medium_risk_domains,
+                "low": user.low_risk_domains,
+                "unknown": user.unknown_domains
+            }
+        }), 200
     
     elif request.method == 'DELETE':
         if DEBUG:
@@ -421,6 +450,13 @@ def domain_route(user_id):
             
             if not domain_to_delete:
                 return jsonify({"error": f"Domain '{domain_name}' not found for user {user_id}"}), 404
+            
+            # Update user's risk counts before deleting the domain
+            user.high_risk_domains -= domain_to_delete.high_risk_domains
+            user.medium_risk_domains -= domain_to_delete.medium_risk_domains
+            user.low_risk_domains -= domain_to_delete.low_risk_domains
+            user.unknown_domains -= domain_to_delete.unknown_domains
+            session.add(user)
                 
             # Delete the domain
             try:
@@ -472,49 +508,252 @@ def domain_route(user_id):
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def handle_permutations(user_id, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
-    if request.method == 'POST':
+    # Sanitize domain name to get just the root domain
+    # root_domain = domain_name.split('/')[0]
+    root_domain = domain_name
+    
+    if request.method == 'GET':
         if DEBUG:
-            logger.debug(f"Received request to get permutations for domain {domain_name}")
+            logger.debug(f"Received request to get permutations for domain {root_domain}")
             
         with Session(engine) as session:
-            user = session.exec(select(User).where(User.user_id == user_id)).first()
-            if not user:
-                return jsonify({"error": "Invalid user_id. User does not exist."}), 400
-
-            # Assuming permutations are generated here (code omitted for brevity)
-            # THIS IS WHERE DNSTWIST IS CALLED!!!
-            generated_permutations = []  # Replace with actual permutation generation logic
-            # Sample JSON POST request for adding permutations:
- 
-            """
-            sample JSON POST request:
-            {
-                "domain_name": "root.com",
-                "permutation_name": "groot.com",
+            # Check if domain exists
+            domain = session.exec(select(Domain).where(
+                (Domain.domain_name == root_domain) & 
+                (Domain.user_id == user_id)
+            )).first()
             
-                "optional_features": {
-                "server": "example.com",
-                "mail_server": "mail.example.com",
-                "risk": true,
-                "ip_address": "192.168.1.1"
-                }
+            if not domain:
+                return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
                 
+            # Get permutations for this domain
+            permutations = session.exec(
+                select(Permutation).where(Permutation.domain_name == root_domain)
+            ).all()
+            
+            # Convert to serializable format with all fields
+            permutations_list = [
+                {
+                    "permutation_name": perm.permutation_name,
+                    "domain_name": perm.domain_name,
+                    "fuzzer": perm.fuzzer,
+                    "server": perm.server,
+                    "mail_server": perm.mail_server,
+                    "ip_address": perm.ip_address,
+                    "mx_spy": perm.mx_spy,
+                    "tlsh": perm.tlsh,
+                    "phash": perm.phash,
+                    "risk": perm.risk,
+                    "risk_level": perm.risk_level
+                }
+                for perm in permutations
+            ]
+            
+        return jsonify({
+            "message": "Permutations retrieved successfully",
+            "domain": root_domain,
+            "total_permutations": len(permutations_list),
+            "permutations": permutations_list,
+            "risk_counts": {
+                "high": domain.high_risk_domains,
+                "medium": domain.medium_risk_domains,
+                "low": domain.low_risk_domains,
+                "unknown": domain.unknown_domains
             }
-            """
+        }), 200
+    
+    if request.method == 'POST':
+        if DEBUG:
+            logger.debug(f"Received request to generate permutations for domain {root_domain}")
 
-            for perm_name in generated_permutations:
-                # Extract optional features from the request
-                optional_features = request.json.get("optional_features", {})
-                new_permutation = Permutation(
-                    permutation_name=perm_name,
-                    domain_name=domain_name,
-                    **optional_features  # (@AndrewPBerg: this is my favorit syntax ever)
-                )
-                session.add(new_permutation)
 
-            session.commit()
+        # actual command for dnstwist
+        command = [
+            'dnstwist', 
+            '--lsh', 'tlsh',
+            '--phash', 
+            '--threads', str(MAX_THREADS),
+            '--mx', 
+            '--banner', 
+            '--registered',
+            '--format', 'json',
+            f'{root_domain}'
+        ]
 
-        return jsonify({"message": "Permutations generated and added to database"}), 201
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            obj = json.loads(result.stdout)
+            
+            # use db session
+            with Session(engine) as session:
+                # Get domain and user objects for updating
+                domain = session.exec(select(Domain).where(
+                    (Domain.domain_name == root_domain) & 
+                    (Domain.user_id == user_id)
+                )).first()
+                
+                if not domain:
+                    return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
+                
+                user = session.exec(select(User).where(User.user_id == user_id)).first()
+                if not user:
+                    return jsonify({"error": "User not found"}), 404
+                
+                # Delete existing permutations for this domain
+                existing_permutations = session.exec(
+                    select(Permutation).where(Permutation.domain_name == root_domain)
+                ).all()
+                
+                for perm in existing_permutations:
+                    session.delete(perm)
+                
+                # Reset domain risk counts before adding new ones
+                user.high_risk_domains -= domain.high_risk_domains
+                user.medium_risk_domains -= domain.medium_risk_domains
+                user.low_risk_domains -= domain.low_risk_domains
+                user.unknown_domains -= domain.unknown_domains
+                
+                domain.high_risk_domains = 0
+                domain.medium_risk_domains = 0
+                domain.low_risk_domains = 0
+                domain.unknown_domains = 0
+                
+                processed_count = 0
+                skipped_count = 0
+                risk_levels = {"Unknown": 0, "low": 0, "medium": 0, "high": 0}
+                
+                # Process new permutations
+                for permutation in obj:
+                    if (permutation.get('tlsh') and permutation.get('phash')) is None:
+                        skipped_count += 1
+                        continue
+                    if (permutation.get('dns_a') is None) or (permutation.get('dns_a') == "!ServFail"):
+                        skipped_count += 1
+                        continue
+                    else:
+                        # max scores of tlsh and phash
+                        risk = max(permutation.get('tlsh', 0), permutation.get('phash', 0))
+                        
+                        # classify risk levels
+                        if risk == 0:
+                            risk_level = "Unknown"
+                            domain.unknown_domains += 1
+                        elif risk <= 25:
+                            risk_level = "low"
+                            domain.low_risk_domains += 1
+                        elif risk <= 50:
+                            risk_level = "medium"
+                            domain.medium_risk_domains += 1
+                        else:
+                            risk_level = "high"
+                            domain.high_risk_domains += 1
+                            
+                        risk_levels[risk_level] += 1
+                            
+                        perm = Permutation(
+                            permutation_name=permutation['domain'],
+                            domain_name=root_domain,
+                            fuzzer=permutation.get('fuzzer', ''),
+                            server=permutation.get('banner_http'),
+                            mail_server=permutation.get('dns_mx', [None])[0] if permutation.get('dns_mx') else None,
+                            ip_address=permutation.get('dns_a', [None])[0] if permutation.get('dns_a') else None,
+                            mx_spy=permutation.get('mx_spy'),
+                            tlsh=permutation.get('tlsh'),
+                            phash=permutation.get('phash'),
+                            risk=risk,
+                            risk_level=risk_level
+                        )
+                        # Add to session
+                        session.add(perm)
+                        processed_count += 1
+                
+                # Update the domain's last scan time
+                domain.last_scan = datetime.now()
+                domain.total_scans += 1
+                
+                # Update user's aggregate risk counts
+                user.high_risk_domains += domain.high_risk_domains
+                user.medium_risk_domains += domain.medium_risk_domains
+                user.low_risk_domains += domain.low_risk_domains
+                user.unknown_domains += domain.unknown_domains
+                
+                # Update the domain record
+                session.add(domain)
+                session.add(user)
+                            
+                # Commit all changes
+                session.commit()
+                
+                # Log permutation scan results to pubsub logs
+                log_data = json.dumps({
+                    "type": "permutation_scan",
+                    "timestamp": datetime.now().isoformat(),
+                    "user_id": user_id,
+                    "domain": root_domain,
+                    "total_permutations": len(obj),
+                    "processed_count": processed_count,
+                    "skipped_count": skipped_count,
+                    "risk_levels": risk_levels,
+                    "risk_counts": {
+                        "high": domain.high_risk_domains,
+                        "medium": domain.medium_risk_domains,
+                        "low": domain.low_risk_domains,
+                        "unknown": domain.unknown_domains
+                    }
+                })
+                write_pubsub_log(log_data)
+                
+                return jsonify({
+                    "message": "Permutations processed successfully",
+                    "domain": root_domain,
+                    "total_permutations": len(obj),
+                    "processed_count": processed_count,
+                    "skipped_count": skipped_count,
+                    "risk_levels": risk_levels,
+                    "domain_risk_counts": {
+                        "high": domain.high_risk_domains,
+                        "medium": domain.medium_risk_domains,
+                        "low": domain.low_risk_domains,
+                        "unknown": domain.unknown_domains
+                    }
+                }), 201
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error occurred: {e.stderr}")
+            
+            # Log errors to pubsub logs
+            error_log = json.dumps({
+                "type": "permutation_scan_error",
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "domain": root_domain,
+                "error": "Failed to execute dnstwist command",
+                "details": str(e.stderr)
+            })
+            write_pubsub_log(error_log)
+            
+            return jsonify({
+                "error": "Failed to execute dnstwist command",
+                "details": str(e.stderr)
+            }), 500
+        except Exception as e:
+            logger.error(f"Database error occurred: {str(e)}")
+            
+            # Log database errors to pubsub logs
+            error_log = json.dumps({
+                "type": "permutation_db_error",
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "domain": root_domain,
+                "error": "Failed to process permutations",
+                "details": str(e)
+            })
+            write_pubsub_log(error_log)
+            
+            return jsonify({
+                "error": "Failed to process permutations",
+                "details": str(e)
+            }), 500
 
 @app.route('/api/<user_id>/schedule', methods=['POST'])
 def schedule_domain(user_id):
@@ -747,7 +986,15 @@ def count_user_permutations(user_id):
         ).all()
 
         if not user_domains:
-            return jsonify({"count": 0}), 200
+            return jsonify({
+                "count": 0, 
+                "risk_counts": {
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0,
+                    "unknown": 0
+                }
+            }), 200
 
         # Count permutations for all user's domains using a subquery
         total_count = session.exec(
@@ -756,7 +1003,15 @@ def count_user_permutations(user_id):
             )
         ).first()
 
-        return jsonify({"count": total_count}), 200
+        return jsonify({
+            "count": total_count, 
+            "risk_counts": {
+                "high": user.high_risk_domains,
+                "medium": user.medium_risk_domains,
+                "low": user.low_risk_domains,
+                "unknown": user.unknown_domains
+            }
+        }), 200
 
 # ------------------------- Startup Sequence -------------------------
 

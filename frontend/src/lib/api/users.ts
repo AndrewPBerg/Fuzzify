@@ -83,6 +83,12 @@ const getUserSettings = async (userId: string): Promise<{
   username: string;
   theme: string;
   horizontal_sidebar: boolean;
+  risk_counts: {
+    high: number;
+    medium: number;
+    low: number;
+    unknown: number;
+  }
 }> => {
   if (!userId) {
     throw new Error("User ID is required");
