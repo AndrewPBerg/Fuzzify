@@ -12,7 +12,6 @@ class User(SQLModel, table=True):
     username: Optional[str] = Field(default=None) # user name
     horizontal_sidebar: bool = Field(default=False)
     theme: str = Field(default="system")
-   
 
 #  Domain Table
 class Domain(SQLModel, table=True):
@@ -24,9 +23,6 @@ class Domain(SQLModel, table=True):
     ip_address: Optional[str] = Field(default=None)  # Resolved IP
     server: Optional[str] = Field(default=None)  # Web server info
     mail_server: Optional[str] = Field(default=None)  # Mail server info
-
-
-# andrew's permutation table
 
 class Permutation(SQLModel, table=True):
     __table_args__ = {"extend_existing": True}
@@ -41,44 +37,6 @@ class Permutation(SQLModel, table=True):
     phash: Optional[int] = Field(default=None)
     risk: Optional[float] = Field(default=-1.0)  # Add risk attribute
     risk_level: Optional[str] = Field(default="Unknown")  # Add risk level attribute
-    
-# # Permutation Table (DNS Twist Results)
-# class Permutation(SQLModel, table=True):
-#     __table_args__ = {"extend_existing": True}
-#     permutation_name: str = Field(primary_key=True)  # Name of generated domain variation
-#     domain_name: str = Field(foreign_key="domain.domain_name")  # Links to real domain
-#     server: Optional[str] = Field(default=None)  # Web server for variation
-#     mail_server: Optional[str] = Field(default=None)  # Mail server for variation
-#     ip_address: Optional[str] = Field(default=None)  # Associated IP address
-#     mx_spy: Optional[bool] = None
-#     risk: Optional[float] = Field(default=-1.0)  # Add risk attribute
-
-
-# class PhishingDomain(SQLModel, table=True):
-#     __table_args__ = {"extend_existing": True}
-#     id: Optional[int] = Field(default=None, primary_key=True) 
-#     domain_name: str = Field(foreign_key="domain.domain_name")  # Original domain
-#     permutation_name: str = Field(foreign_key="permutation.permutation_name")  # Variant
-#     url: Optional[str] = Field(default=None)  # Full URL if resolved
-#     similarity_score: float = Field(default=0.0)  # % match from LSH or pHash
-#     method: str = Field(default="lsh")  # 'lsh' 
-#     created_at: datetime = Field(default_factory=datetime.utcnow)
-#     server: Optional[str] = Field(default=None)
-#     mail_server: Optional[str] = Field(default=None)
-#     ip_address: Optional[str] = Field(default=None)
-
-# class ImagePhishingDomain(SQLModel, table=True):
-#     __table_args__ = {"extend_existing": True}
-#     id: Optional[int] = Field(default=None, primary_key=True)
-#     domain_name: str = Field(foreign_key="domain.domain_name")  # Original domain
-#     permutation_name: str = Field(foreign_key="permutation.permutation_name")  # Variant
-#     url: Optional[str] = Field(default=None)  # Full URL if resolved
-#     similarity_score: float = Field(default=0.0)  # % match from LSH or pHash
-#     method: str = Field(default="phash")  # 'phash'
-#     created_at: datetime = Field(default_factory=datetime.utcnow)
-#     server: Optional[str] = Field(default=None)
-#     mail_server: Optional[str] = Field(default=None)
-#     ip_address: Optional[str] = Field(default=None)
 
 class Schedule(SQLModel, table=True):
     schedule_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)

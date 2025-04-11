@@ -26,7 +26,7 @@ def write_pubsub_log(message_data):
 
 # Enable Debugging for Logs
 DEBUG = True
-DROP_TABLES = True  # Temporarily set to True to recreate tables with new schem
+DROP_TABLES = False  # Temporarily set to True to recreate tables with new schem
 MAX_THREADS = os.cpu_count() - 1 if os.cpu_count() is not None else None
 
 # Set up logging
