@@ -421,16 +421,16 @@ export function DomainTable() {
                       <div className="flex items-center gap-1.5">
                         {threatIcons[domain.risk_level] || threatIcons["Unknown"]}
                         <Tooltip>
-                          <TooltipTrigger>
-                            <button type="button" className={cn(
-                              "px-2 py-1 rounded-full text-xs font-medium",
+                          <TooltipTrigger asChild>
+                            <div className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium cursor-pointer",
                               domain.risk_level === "high" && "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400",
                               domain.risk_level === "medium" && "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400",
                               domain.risk_level === "low" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
                               domain.risk_level === "Unknown" && "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
                             )}>
                               {domain.risk_level}
-                            </button>
+                            </div>
                           </TooltipTrigger>
                           <TooltipContent className={tooltipStyles.content}>
                             <div>
