@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from google.cloud import pubsub_v1
 import logging
 import time
-from models import User, Domain, Permutation, Schedule
+from models import User, Domain, Permutation, Schedule, ImagePhishingDomain, PhishingDomain
 import threading
 from uuid import uuid4
 from test_perm import generate_and_store_permutations
@@ -35,12 +35,11 @@ import logging
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Suppress noisy Pub/Sub debug logs from external libraries
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager').setLevel(logging.INFO)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.dispatcher').setLevel(logging.INFO)
-logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.heartbeater').setLevel(logging.WARNING)
-logging.getLogger('google.cloud.pubsub_v1.publisher._batch.thread').setLevel(logging.INFO)
-logging.getLogger('google.api_core.bidi').setLevel(logging.INFO)
+# Completely disable the noisy leaser logs
+logging.getLogger('google.cloud.pubsub_v1.subscriber._protocol.leaser').setLevel(logging.CRITICAL)
+# Also silence other related logs
+logging.getLogger('google.cloud.pubsub_v1').setLevel(logging.WARNING)
+logging.getLogger('google.api_core').setLevel(logging.WARNING)
 
 if DEBUG:
     logger.debug("Starting application in DEBUG mode")
@@ -472,49 +471,157 @@ def domain_route(user_id):
 @app.route('/api/<user_id>/<domain_name>/permutations', methods=['POST', 'GET'])
 def handle_permutations(user_id, domain_name):
     """Generates permutations using dnstwist and stores them in MySQL or fetches stored permutations for a given domain."""
-    if request.method == 'POST':
+    # Sanitize domain name to get just the root domain
+    root_domain = domain_name.split('/')[0]
+    
+    if request.method == 'GET':
         if DEBUG:
-            logger.debug(f"Received request to get permutations for domain {domain_name}")
+            logger.debug(f"Received request to get permutations for domain {root_domain}")
             
         with Session(engine) as session:
-            user = session.exec(select(User).where(User.user_id == user_id)).first()
-            if not user:
-                return jsonify({"error": "Invalid user_id. User does not exist."}), 400
-
-            # Assuming permutations are generated here (code omitted for brevity)
-            # THIS IS WHERE DNSTWIST IS CALLED!!!
-            generated_permutations = []  # Replace with actual permutation generation logic
-            # Sample JSON POST request for adding permutations:
- 
-            """
-            sample JSON POST request:
-            {
-                "domain_name": "root.com",
-                "permutation_name": "groot.com",
+            # Check if domain exists
+            domain = session.exec(select(Domain).where(
+                (Domain.domain_name == root_domain) & 
+                (Domain.user_id == user_id)
+            )).first()
             
-                "optional_features": {
-                "server": "example.com",
-                "mail_server": "mail.example.com",
-                "risk": true,
-                "ip_address": "192.168.1.1"
-                }
+            if not domain:
+                return jsonify({"error": "Domain not found or doesn't belong to user"}), 404
                 
-            }
-            """
+            # Get permutations for this domain
+            permutations = session.exec(
+                select(Permutation).where(Permutation.domain_name == root_domain)
+            ).all()
+            
+            # Convert to serializable format
+            permutations_list = [
+                {
+                    "permutation_name": perm.permutation_name,
+                    "domain_name": perm.domain_name,
+                    "server": perm.server,
+                    "mail_server": perm.mail_server,
+                    "risk": perm.risk,
+                    "ip_address": perm.ip_address
+                }
+                for perm in permutations
+            ]
+            
+        return jsonify({"permutations": permutations_list}), 200
+    if request.method == 'POST':
+            if DEBUG:
+                logger.debug(f"Received request to generate permutations for domain {root_domain}")
 
-            for perm_name in generated_permutations:
-                # Extract optional features from the request
-                optional_features = request.json.get("optional_features", {})
-                new_permutation = Permutation(
-                    permutation_name=perm_name,
-                    domain_name=domain_name,
-                    **optional_features  # (@AndrewPBerg: this is my favorit syntax ever)
-                )
-                session.add(new_permutation)
+            with Session(engine) as session:
+                user = session.exec(select(User).where(User.user_id == user_id)).first()
+                if not user:
+                    return jsonify({"error": "Invalid user_id. User does not exist."}), 400
 
-            session.commit()
+                domain = session.exec(select(Domain).where(Domain.domain_name == root_domain)).first()
+                if not domain:
+                    # Create domain entry if not already present
+                    domain = Domain(domain_name=root_domain, user_id=user.user_id)
+                    session.add(domain)
+                    session.commit()
+                    session.refresh(domain)
 
-        return jsonify({"message": "Permutations generated and added to database"}), 201
+                def run_dnstwist(domain_name, mode):
+                    # Extract the root domain (remove path components) to avoid command line issues
+                    root_domain = domain_name.split('/')[0]
+                    
+                    command = [
+                        'dnstwist',
+                        '--phash' if mode == 'phash' else '--lsh', 'tlsh' if mode == 'lsh' else '',
+                        '--mx', '--banner', '--format', 'json'
+                    ]
+                    if mode == 'phash':
+                        command += [f'https://{root_domain}']
+                    command.append(root_domain)
+                    
+                    logger.debug(f"Running dnstwist command: {' '.join(command)}")
+                    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    if result.returncode != 0:
+                        logger.error(f"dnstwist error: {result.stderr}")
+                        return []
+                    try:
+                        return json.loads(result.stdout)
+                    except json.JSONDecodeError:
+                        logger.error("Failed to decode JSON from dnstwist")
+                        return []
+
+                def extract_ip_and_mail(entry):
+                    ip = None
+                    mail = None
+                    if isinstance(entry.get("dns_mx"), list) and entry["dns_mx"]:
+                        mail = entry["dns_mx"][0]
+                    elif isinstance(entry.get("dns_mx"), str):
+                        mail = entry["dns_mx"]
+                    if isinstance(entry.get("dns_a"), list) and entry["dns_a"]:
+                        ip = entry["dns_a"][0]
+                    elif isinstance(entry.get("dns_aaaa"), list) and entry["dns_aaaa"]:
+                        ip = entry["dns_aaaa"][0]
+                    return mail, ip
+
+                def process_results(data, threshold, mode):
+                    hits = []
+                    for entry in data:
+                        permutation_name = entry.get("domain")
+                        similarity = entry.get("fuzzy_hash_similarity") if mode == "lsh" else entry.get("phash")
+                        if not permutation_name:
+                            continue
+
+                        mail_server, ip_address = extract_ip_and_mail(entry)
+                        server = entry.get("banner_http") or entry.get("http_server")
+
+                        permutation = session.exec(
+                            select(Permutation).where(Permutation.permutation_name == permutation_name)
+                        ).first()
+
+                        if not permutation:
+                            permutation = Permutation(
+                                permutation_name=permutation_name,
+                                domain_name=domain.domain_name,
+                                server=server,
+                                mail_server=mail_server,
+                                ip_address=ip_address,
+                                mx_spy=entry.get("mx_spy")
+                            )
+                            session.add(permutation)
+                            session.commit()
+                            session.refresh(permutation)
+
+                        if similarity is not None and similarity >= threshold:
+                            shared_fields = {
+                                "domain_name": domain.domain_name,
+                                "permutation_name": permutation_name,
+                                "url": entry.get("url"),
+                                "similarity_score": similarity,
+                                "method": mode,
+                                "created_at": datetime.now(datetime.timezone.utc),  # Changed to use utcnow() instead of datetime.now(timezone.utc)
+                                "server": server,
+                                "mail_server": mail_server,
+                                "ip_address": ip_address
+                            }
+                            if mode == "lsh":
+                                hit = PhishingDomain(**shared_fields)
+                            else:
+                                hit = ImagePhishingDomain(**shared_fields)
+                            session.add(hit)
+                            hits.append(hit)
+                    session.commit()
+                    return hits
+
+                # Run and process both LSH and pHash
+                lsh_data = run_dnstwist(root_domain, mode="lsh")
+                phash_data = run_dnstwist(root_domain, mode="phash")
+
+                lsh_hits = process_results(lsh_data, threshold=40, mode="lsh")
+                phash_hits = process_results(phash_data, threshold=60, mode="phash")
+
+            return jsonify({
+                "message": "dnstwist scan complete.",
+                "lsh_hits": [hit.permutation_name for hit in lsh_hits],
+                "phash_hits": [hit.permutation_name for hit in phash_hits]
+            }), 201
 
 @app.route('/api/<user_id>/schedule', methods=['POST'])
 def schedule_domain(user_id):

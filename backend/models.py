@@ -35,6 +35,7 @@ class Permutation(SQLModel, table=True):
     mail_server: Optional[str] = Field(default=None)  # Mail server for variation
     ip_address: Optional[str] = Field(default=None)  # Associated IP address
     mx_spy: Optional[bool] = None
+    risk: Optional[float] = Field(default=-1.0)  # Add risk attribute
 
 
 class PhishingDomain(SQLModel, table=True):
