@@ -9,7 +9,9 @@ class User(SQLModel, table=True):
     __table_args__ = {"extend_existing": True}
     __tablename__ = "user"
     user_id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    username: Optional[str] = Field(default=None) # user name 
+    username: Optional[str] = Field(default=None) # user name
+    horizontal_sidebar: bool = Field(default=False)
+    theme: str = Field(default="system")
    
 
 #  Domain Table
