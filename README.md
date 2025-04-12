@@ -7,6 +7,11 @@
   Secure your domain and monitor domain impersonations
 </p>
 
+<p align="center" style="font-size: 1.25rem; margin-top: 0.5rem; color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px;">
+  Also see our <a href="https://youtu.be/T0IThoxi1rc">Fuzzify Demo Video</a>
+</p>
+
+
 <p align="center">
   <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
   <img src="https://img.shields.io/github/stars/AndrewPBerg/Fuzzify?style=social" alt="GitHub stars">
