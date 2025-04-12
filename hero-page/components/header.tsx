@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Menu, PresentationIcon, X, ExternalLink } from "lucide-react"
+import { Menu, PresentationIcon, X, ExternalLink, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 
@@ -140,6 +140,16 @@ export default function Header({
             </nav>
 
             <Button
+              asChild
+              className="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium px-3 py-1.5 sm:px-4 sm:py-2 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/20 flex items-center gap-1.5 sm:gap-2"
+            >
+              <a href="https://github.com/AndrewPBerg/Fuzzify" target="_blank" rel="noopener noreferrer" className="flex items-center">
+                <Github className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-1">GitHub</span>
+              </a>
+            </Button>
+
+            <Button
               onClick={onStartPresentation}
               className="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium px-3 py-1.5 sm:px-4 sm:py-2 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/20 flex items-center gap-1.5 sm:gap-2 group relative overflow-hidden"
             >
@@ -214,6 +224,16 @@ export default function Header({
               <a href={dashboardUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
                 <span>Try Now</span>
                 <ExternalLink className="h-5 w-5" />
+              </a>
+            </Button>
+            
+            <Button
+              asChild
+              className="w-full bg-white/10 hover:bg-white/20 text-white text-base font-medium py-3 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/20 flex items-center justify-center gap-2"
+            >
+              <a href="https://github.com/AndrewPBerg/Fuzzify" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                <Github className="h-5 w-5" />
+                <span>GitHub</span>
               </a>
             </Button>
             
