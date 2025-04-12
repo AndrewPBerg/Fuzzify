@@ -157,21 +157,18 @@ export default function DemoSection({ id }: DemoSectionProps) {
             </CardHeader>
             <CardContent>
               <div ref={videoRef} className="aspect-video bg-white/5 rounded-md flex items-center justify-center">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="gap-2 bg-white/10 text-white border-white/20 hover:bg-white/20"
-                >
-                  <Play className="h-4 w-4" />
-                  See Threat Detection in Action
-                </Button>
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  src="https://www.youtube.com/embed/T0IThoxi1rc" 
+                  title="Fuzzify 2025 Capstone Video" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  referrerPolicy="strict-origin-when-cross-origin" 
+                  allowFullScreen 
+                ></iframe>
               </div>
             </CardContent>
-            <CardFooter>
-              <p className="text-base text-white/60">
-                This interactive demo shows our domain analysis and threat scoring system in real-time
-              </p>
-            </CardFooter>
           </Card>
           
           <div className="flex justify-center w-full">
