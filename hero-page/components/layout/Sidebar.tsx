@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, MOBILE_BREAKPOINT } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { userStorage } from "@/lib/demo-data/user";
 
@@ -56,8 +56,6 @@ const navigation = [
   { name: "Settings", href: "/demo-app/settings", icon: Settings },
 ];
 
-
-
 // Horizontal sidebar component
 const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
   const [username, setUsername] = useState(() => {
@@ -82,15 +80,18 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
   return (
     <>
       {/* Add a spacer div to prevent content from being hidden under the navbar */}
-      <div className="h-16" />
+      <div className="h-16 md:h-16" />
       <div className={cn(
         "fixed top-0 left-0 right-0 z-50",
-        "h-16 px-4 bg-background/95 backdrop-blur-lg",
+        "h-14 md:h-16 px-2 md:px-4 bg-background/95 backdrop-blur-lg",
         "border-b border-border",
         "flex items-center justify-between",
         "transition-all duration-300"
       )}>
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        {/* App name/logo for mobile */}
+        <div className="md:hidden font-semibold text-primary">Fuzzify</div>
+        
+        <div className="flex items-center gap-1 md:gap-2 overflow-x-auto no-scrollbar">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -99,7 +100,7 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center justify-center h-9 w-9 rounded-full shrink-0",
+                      "flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-full shrink-0",
                       "transition-colors duration-200",
                       "hover:bg-muted",
                       isActive 
@@ -108,7 +109,7 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
                     )}
                   >
                     <item.icon 
-                      size={18} 
+                      size={16} 
                       className={cn(
                         "transition-colors duration-200",
                         isActive ? "text-primary-foreground" : "text-muted-foreground"
@@ -125,12 +126,12 @@ const HorizontalSidebar = memo(({ pathname }: { pathname: string }) => {
           })}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          <ThemeToggle className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted" />
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
+          <ThemeToggle className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-muted/50 hover:bg-muted" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-muted/50 hover:bg-muted">
-                <User className="h-4.5 w-4.5 text-muted-foreground" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-muted/50 hover:bg-muted">
+                <User className="h-4 w-4 text-muted-foreground" />
                 <span className="sr-only">Account menu</span>
               </Button>
             </DropdownMenuTrigger>
@@ -236,33 +237,35 @@ export function Sidebar() {
     };
   }, []);
 
-  // Check for horizontal sidebar preference
+  // Force horizontal sidebar on mobile
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      // If on mobile, always use horizontal sidebar
-      if (isMobile) {
+    const handleResize = () => {
+      const isMobileView = window.innerWidth < MOBILE_BREAKPOINT;
+      
+      if (isMobileView && !useHorizontalSidebar) {
         setUseHorizontalSidebar(true);
-        return;
+        
+        // Reset any padding
+        window.dispatchEvent(new CustomEvent("contentPaddingChange", { 
+          detail: { left: 0, right: 0 } 
+        }));
+      } else if (!isMobileView) {
+        // On desktop, respect user preference
+        const horizontalPref = localStorage.getItem("horizontalSidebar") === "true";
+        setUseHorizontalSidebar(horizontalPref);
       }
-      
-      // Otherwise, check user preference from settings
-      const horizontalSidebarPref = localStorage.getItem("horizontalSidebar");
-      setUseHorizontalSidebar(horizontalSidebarPref === "true");
-
-      // Listen for changes to horizontal sidebar preference
-      const handleHorizontalSidebarChange = (event: CustomEvent) => {
-        setUseHorizontalSidebar(event.detail.enabled);
-      };
-
-      window.addEventListener("horizontalSidebarChange", 
-        handleHorizontalSidebarChange as EventListener);
-      
-      return () => {
-        window.removeEventListener("horizontalSidebarChange", 
-          handleHorizontalSidebarChange as EventListener);
-      };
-    }
-  }, [isMobile]);
+    };
+    
+    // Initial check
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Apply initial content padding for default left-locked sidebar
   useEffect(() => {
@@ -526,7 +529,7 @@ export function Sidebar() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // If using horizontal sidebar (mobile or user preference), render horizontal version
-  if (useHorizontalSidebar) {
+  if (useHorizontalSidebar || isMobile) {
     return <HorizontalSidebar pathname={pathname} />;
   }
 

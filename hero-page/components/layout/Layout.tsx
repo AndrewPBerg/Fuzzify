@@ -101,12 +101,12 @@ export function Layout({ children }: LayoutProps) {
         className={cn(
           "min-h-screen transition-all duration-300",
           sidebarMode === SidebarMode.Horizontal && "ml-0",
-          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-2 md:px-4 lg:px-6",
-          isLoginPage && "container mx-auto px-2 md:px-4 lg:px-6" // Always use container for login page
+          contentPadding.left || contentPadding.right ? "" : "container mx-auto px-2 sm:px-3 md:px-4 lg:px-6",
+          isLoginPage && "container mx-auto px-2 sm:px-3 md:px-4 lg:px-6" // Always use container for login page
         )}
         style={{ 
-          paddingLeft: isLoginPage ? undefined : (contentPadding.left ? `${Math.max(contentPadding.left - 16, 0)}px` : undefined),
-          paddingRight: isLoginPage ? undefined : (contentPadding.right ? `${Math.max(contentPadding.right - 16, 0)}px` : undefined),
+          paddingLeft: isLoginPage ? undefined : (contentPadding.left ? `${Math.max(contentPadding.left - (isMobile ? 8 : 16), 0)}px` : undefined),
+          paddingRight: isLoginPage ? undefined : (contentPadding.right ? `${Math.max(contentPadding.right - (isMobile ? 8 : 16), 0)}px` : undefined),
           maxWidth: isLoginPage ? "1600px" : (contentPadding.left || contentPadding.right ? "100%" : "1600px"),
           width: "100%",
           transition: "padding 0.4s ease-out, margin 0.4s ease-out"
@@ -116,9 +116,9 @@ export function Layout({ children }: LayoutProps) {
       </main>
       
       {/* Persistent Message in Bottom Left */}
-      <div className="fixed bottom-3 left-3 z-50 max-w-sm p-3 text-sm bg-background/80 backdrop-blur-sm border border-border rounded-md shadow-md">
+      <div className="fixed bottom-3 left-3 z-50 max-w-[calc(100vw-24px)] sm:max-w-sm p-2 sm:p-3 text-xs sm:text-sm bg-background/80 backdrop-blur-sm border border-border rounded-md shadow-md">
         <a href={typeof window !== 'undefined' ? window.location.origin : '/'} className="flex items-center text-primary hover:underline mt-2">
-          <HomeIcon className="h-4 w-4 mr-1" />
+          <HomeIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
           <span>Back To Landing Page</span>
         </a>
         <p className="text-muted-foreground">
