@@ -25,8 +25,7 @@ As a workaround, if you are on an ARM-based system, please follow these steps:
 ```zsh
 docker volume create mysql_data
 ```
-### Step 2: Extract [mysql_data_backup.tar.gz](https://github.com/AndrewPBerg/Fuzzify/blob/master/mysql_data_backup.tar.gz)
-) into local Docker Volumes
+### Step 2: Extract [mysql_data_backup.tar.gz](https://github.com/AndrewPBerg/Fuzzify/blob/master/mysql_data_backup.tar.gz) into local Docker Volumes
 
 > Windows
 ```ps1
