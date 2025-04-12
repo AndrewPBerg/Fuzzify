@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -24,13 +24,34 @@ export function DNSFuzzVisualizer({
 }: DNSFuzzVisualizerProps) {
   const [domains, setDomains] = useState<FuzzedDomain[]>([]);
   const [showEdges, setShowEdges] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
   
   // Calculate positions for the nodes
   const calculateNodePositions = (index: number, total: number, radius: number) => {
+    // For mobile, use a smaller and more vertical layout
+    const adjustedRadius = isMobile 
+      ? { x: radius * 0.6, y: radius * 0.9 }  // Elliptical shape on mobile
+      : { x: radius, y: radius };             // Circular on larger screens
+    
     // Calculate positions in a circular arrangement
     const angle = (index / total) * 2 * Math.PI;
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
+    const x = adjustedRadius.x * Math.cos(angle);
+    const y = adjustedRadius.y * Math.sin(angle);
     
     return { x, y };
   };
@@ -59,10 +80,13 @@ export function DNSFuzzVisualizer({
   }, [fuzzedDomains]);
   
   return (
-    <div className={cn(
-      "relative w-full aspect-[2/1] md:aspect-[3/2] max-h-[400px] flex items-center justify-center mt-6", 
-      className
-    )}>
+    <div 
+      ref={containerRef}
+      className={cn(
+        "relative w-full aspect-[1.5/2] sm:aspect-[2/1] md:aspect-[3/2] max-h-[350px] sm:max-h-[400px] flex items-center justify-center mt-3 sm:mt-6", 
+        className
+      )}
+    >
       {/* Central node (original domain) */}
       <motion.div
         initial={{ opacity: 0, scale: 0 }}
@@ -72,14 +96,15 @@ export function DNSFuzzVisualizer({
           type: "spring", 
           stiffness: 200 
         }}
-        className="absolute z-10 flex items-center justify-center w-24 h-24 md:w-28 md:h-28 text-xs md:text-sm font-bold text-white bg-emerald-600 rounded-full shadow-lg border-2 border-white/30"
+        className="absolute z-10 flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-[11px] sm:text-xs md:text-sm font-bold text-white bg-emerald-600 rounded-full shadow-lg border-2 border-white/30"
       >
         {originalDomain}
       </motion.div>
       
       {/* Fuzzed domain nodes */}
       {domains.map((domain, index) => {
-        const position = calculateNodePositions(index, fuzzedDomains.length, 175);
+        const radius = isMobile ? 130 : 175;
+        const position = calculateNodePositions(index, fuzzedDomains.length, radius);
         
         return (
           <TooltipProvider key={domain.domainName}>
@@ -105,14 +130,14 @@ export function DNSFuzzVisualizer({
                     damping: 10
                   }}
                   className={cn(
-                    "absolute z-10 flex items-center justify-center w-20 h-20 md:w-22 md:h-22 text-[10px] md:text-xs font-medium text-white rounded-full shadow-md backdrop-blur-sm cursor-pointer border border-white/20",
+                    "absolute z-10 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 text-[9px] sm:text-[10px] md:text-xs font-medium text-white rounded-full shadow-md backdrop-blur-sm cursor-pointer border border-white/20",
                     domain.registered ? "bg-blue-dark" : "bg-blue-medium"
                   )}
                 >
                   {domain.domainName}
                 </motion.div>
               </TooltipTrigger>
-              <TooltipContent className="bg-blue-dark/90 backdrop-blur-md border border-white/20 text-white">
+              <TooltipContent className="bg-blue-dark/90 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm">
                 <p><strong>Domain:</strong> {domain.domainName}</p>
                 {domain.fuzzMethod && (
                   <p><strong>Method:</strong> {domain.fuzzMethod}</p>
@@ -129,7 +154,8 @@ export function DNSFuzzVisualizer({
         <g className="translate-x-1/2 translate-y-1/2">
           {/* Lines from center to each node */}
           {domains.map((domain, index) => {
-            const position = calculateNodePositions(index, fuzzedDomains.length, 175);
+            const radius = isMobile ? 130 : 175;
+            const position = calculateNodePositions(index, fuzzedDomains.length, radius);
             
             return (
               <motion.line
@@ -142,7 +168,7 @@ export function DNSFuzzVisualizer({
                 x2={position.x}
                 y2={position.y}
                 stroke={domain.registered ? "#17345A" : "#4D6A8F"}
-                strokeWidth="2"
+                strokeWidth={isMobile ? "1.5" : "2"}
                 strokeDasharray="4 2"
               />
             );
@@ -150,9 +176,10 @@ export function DNSFuzzVisualizer({
           
           {/* Lines between adjacent nodes */}
           {showEdges && domains.length > 1 && domains.map((domain, index) => {
-            const currentPosition = calculateNodePositions(index, fuzzedDomains.length, 175);
+            const radius = isMobile ? 130 : 175;
+            const currentPosition = calculateNodePositions(index, fuzzedDomains.length, radius);
             const nextIndex = (index + 1) % domains.length;
-            const nextPosition = calculateNodePositions(nextIndex, fuzzedDomains.length, 175);
+            const nextPosition = calculateNodePositions(nextIndex, fuzzedDomains.length, radius);
             
             return (
               <motion.line
@@ -165,7 +192,7 @@ export function DNSFuzzVisualizer({
                 x2={nextPosition.x}
                 y2={nextPosition.y}
                 stroke={domain.registered ? "#17345A" : "#4D6A8F"}
-                strokeWidth="2.5"
+                strokeWidth={isMobile ? "1.5" : "2.5"}
                 strokeDasharray="5 3"
               />
             );
