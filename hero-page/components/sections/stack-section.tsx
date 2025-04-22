@@ -68,6 +68,11 @@ export default function StackSection({ id }: StackSectionProps) {
       image: "/google-cloud-pub-sub-logo.svg",
       alt: "Google Cloud Pub/Sub Logo",
     },
+    {
+      name: "Docker",
+      image: "/docker_logo.png",
+      alt: "Docker Logo",
+    },
   ]
 
   return (
@@ -93,7 +98,7 @@ export default function StackSection({ id }: StackSectionProps) {
 
         <div
           ref={ref}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8 max-w-5xl mx-auto"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8 max-w-7xl mx-auto"
         >
           {techStack.map((tech, index) => (
             <div
@@ -111,7 +116,7 @@ export default function StackSection({ id }: StackSectionProps) {
             >
               <div 
                 className={`
-                  flex flex-col items-center p-6 rounded-xl 
+                  flex flex-col items-center justify-between p-6 rounded-xl 
                   backdrop-blur-lg border border-white/10
                   ${hoveredIndex === index 
                     ? 'bg-gradient-to-b from-blue-medium/30 to-blue-dark/40' 
@@ -119,11 +124,11 @@ export default function StackSection({ id }: StackSectionProps) {
                   }
                   transition-all duration-300 ease-in-out
                   hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30
-                  transform hover:-translate-y-2
+                  transform hover:-translate-y-2 h-52
                 `}
               >
                 <div 
-                  className="relative w-24 h-24 md:w-30 md:h-30 mb-4"
+                  className="relative w-24 h-24 md:w-30 md:h-30"
                   style={{
                     transform: hoveredIndex === index ? 'scale(1.1)' : 'scale(1)',
                     transition: 'transform 0.3s ease-out'
@@ -136,7 +141,7 @@ export default function StackSection({ id }: StackSectionProps) {
                     style={{ objectFit: "contain" }}
                   />
                 </div>
-                <h3 className="text-lg font-semibold text-center text-foreground">{tech.name}</h3>
+                <h3 className="text-lg font-semibold text-center text-foreground mt-4">{tech.name}</h3>
               </div>
               
               {/* Glowing effect */}

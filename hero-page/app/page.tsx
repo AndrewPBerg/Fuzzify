@@ -9,16 +9,16 @@ export default function Home() {
       title: "Home",
     },
     {
+      id: "about",
+      title: "About",
+    },
+    {
       id: "team",
       title: "Team",
     },
     {
       id: "stack",
       title: "Stack",
-    },
-    {
-      id: "about",
-      title: "About",
     },
     {
       id: "the-fuzz",

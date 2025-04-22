@@ -202,9 +202,9 @@ export default function MainContent({ title, subtitle = "", sections }: MainCont
   // Map sections to components
   const sectionComponents = [
     <HeroSection key="hero" id="hero" />,
+    <AboutSection key="about" id="about" />,
     <TeamSection key="team" id="team" />,
     <StackSection key="stack" id="stack" />,
-    <AboutSection key="about" id="about" />,
     <TheFuzzSection key="the-fuzz" id="the-fuzz" />,
     <OurSystemSection key="our-system" id="our-system" />,
     <DemoSection key="demo" id="demo" />,
