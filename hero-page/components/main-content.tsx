@@ -11,6 +11,7 @@ import OurSystemSection from "@/components/sections/our-system-section"
 import TeamSection from "@/components/sections/team-section"
 import DemoSection from "@/components/sections/demo-section"
 import { cn } from "@/lib/utils"
+import StackSection from "./sections/stack-section"
 
 interface Section {
   id: string
@@ -201,10 +202,11 @@ export default function MainContent({ title, subtitle = "", sections }: MainCont
   // Map sections to components
   const sectionComponents = [
     <HeroSection key="hero" id="hero" />,
+    <TeamSection key="team" id="team" />,
+    <StackSection key="stack" id="stack" />,
     <AboutSection key="about" id="about" />,
     <TheFuzzSection key="the-fuzz" id="the-fuzz" />,
     <OurSystemSection key="our-system" id="our-system" />,
-    <TeamSection key="team" id="team" />,
     <DemoSection key="demo" id="demo" />,
   ]
 

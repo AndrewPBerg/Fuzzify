@@ -9,6 +9,14 @@ export default function Home() {
       title: "Home",
     },
     {
+      id: "team",
+      title: "Team",
+    },
+    {
+      id: "stack",
+      title: "Stack",
+    },
+    {
       id: "about",
       title: "About",
     },
@@ -19,10 +27,6 @@ export default function Home() {
     {
       id: "our-system",
       title: "Our System",
-    },
-    {
-      id: "team",
-      title: "Team",
     },
     {
       id: "demo",
