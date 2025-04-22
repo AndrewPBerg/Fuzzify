@@ -5,6 +5,7 @@ import { useTheme } from "@/components/ui/ThemeProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { userStorage, useUsers, useCreateUser, useUpdateUserSettings } from "@/lib/api/users";
+import Image from "next/image";
 
 // Define settings sections and fields
 const settingsSections = [
@@ -174,7 +175,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative">
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
@@ -346,6 +347,20 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+      
+      {/* QR Code in bottom right corner */}
+      <div className="fixed bottom-6 right-6 z-10">
+        <div className="flex flex-col items-center gap-2">
+          <Image 
+            src="/fuzzify-app-qr.png"
+            alt="Fuzzify App QR Code"
+            width={420}
+            height={420}
+            className="rounded-md shadow-lg"
+          />
+          <p className="text-2xl text-muted-foreground">Scan to Learn More About Fuzzify</p>
         </div>
       </div>
     </div>
